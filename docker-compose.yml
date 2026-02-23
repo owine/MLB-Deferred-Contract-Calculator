@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  mlb-calculator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GEMINI_API_KEY: ${GEMINI_API_KEY}
+    container_name: mlb-deferred-calculator
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    # Uncomment if you need to persist any data
+    # volumes:
+    #   - ./data:/app/data
