@@ -8,7 +8,9 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["^Dockerfile$"],
+      "managerFilePatterns": [
+        "/^Dockerfile$/"
+      ],
       "matchStrings": [
         "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\nRUN npm install -g \\S+@(?<currentValue>\\S+)"
       ],
@@ -16,7 +18,9 @@
     },
     {
       "customType": "regex",
-      "fileMatch": ["^index\\.html$"],
+      "managerFilePatterns": [
+        "/^index\\.html$/"
+      ],
       "matchStrings": [
         "<!--\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s+versioning=(?<versioning>\\S+)\\s*-->\\n\\s*<script src=\"https://cdn\\.tailwindcss\\.com/(?<currentValue>[^\"]+)\""
       ]
@@ -24,11 +28,19 @@
   ],
   "packageRules": [
     {
-      "matchFileNames": ["docker-compose.yml"],
+      "matchFileNames": [
+        "docker-compose.yml"
+      ],
       "pinDigests": false
     },
     {
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest", "lockFileMaintenance"],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest",
+        "lockFileMaintenance"
+      ],
       "automerge": true
     }
   ]
