@@ -6,10 +6,6 @@ FROM node:24-alpine@sha256:7fddd9ddeae8196abf4a3ef2de34e11f7b1a722119f91f28ddf1e
 
 WORKDIR /app
 
-# Accept API key as build argument
-ARG GEMINI_API_KEY
-ENV GEMINI_API_KEY=$GEMINI_API_KEY
-
 # Copy package files
 COPY package*.json ./
 
