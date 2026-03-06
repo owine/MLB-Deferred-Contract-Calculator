@@ -1,5 +1,0 @@
-{
-  "name": "MLB Deferred Contract Calculator",
-  "description": "A specialized calculator to determine the Competitive Balance Tax (Luxury Tax) implications of deferred money in MLB contracts, based on Article XXIII of the 2022-2026 Basic Agreement.",
-  "requestFramePermissions": []
-}
