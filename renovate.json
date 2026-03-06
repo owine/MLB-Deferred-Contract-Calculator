@@ -9,6 +9,10 @@
     {
       "matchFileNames": ["docker-compose.yml"],
       "pinDigests": false
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest", "lockFileMaintenance"],
+      "automerge": true
     }
   ]
 }
