@@ -5,6 +5,23 @@
   ],
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^Dockerfile$"],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\nRUN npm install -g \\S+@(?<currentValue>\\S+)"
+      ],
+      "versioningTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "fileMatch": ["^index\\.html$"],
+      "matchStrings": [
+        "<!--\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s+versioning=(?<versioning>\\S+)\\s*-->\\n\\s*<script src=\"https://cdn\\.tailwindcss\\.com/(?<currentValue>[^\"]+)\""
+      ]
+    }
+  ],
   "packageRules": [
     {
       "matchFileNames": ["docker-compose.yml"],
