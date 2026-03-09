@@ -1,8 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:best-practices"
+    "config:best-practices",
+    ":semanticPrefixFixDepsChoreOthers",
+    "schedule:weekly"
   ],
+  "timezone": "America/Chicago",
+  "schedule": ["on Monday"],
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "customManagers": [
@@ -42,6 +46,26 @@
         "lockFileMaintenance"
       ],
       "automerge": true
+    },
+    {
+      "description": "Group React packages together",
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "groupName": "react"
+    },
+    {
+      "description": "Group Tailwind CSS packages together",
+      "matchPackageNames": ["tailwindcss", "@tailwindcss/vite"],
+      "groupName": "tailwindcss"
+    },
+    {
+      "description": "Group Vite and its plugins together",
+      "matchPackageNames": ["vite", "@vitejs/plugin-react"],
+      "groupName": "vite"
+    },
+    {
+      "description": "Group all lint/type-check tooling",
+      "matchPackageNames": ["typescript", "@types/node"],
+      "groupName": "dev-tooling"
     }
   ]
 }
