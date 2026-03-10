@@ -522,8 +522,9 @@ const App: React.FC = () => {
                         minTickGap={5}
                         tick={{fontSize: 11}}
                       />
-                      <YAxis 
+                      <YAxis
                         tickFormatter={(value) => `$${value / 1000000}M`}
+                        niceTicks="adaptive"
                       />
                       <Tooltip 
                         formatter={(value: number) => formatMoney(value)}
