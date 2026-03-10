@@ -14,7 +14,7 @@ import {
   ResponsiveContainer, 
   ReferenceLine 
 } from 'recharts';
-import { calculateContract, formatMoney, formatMillions, ContractData, CalculationResult } from './utils/calculations';
+import { calculateContract, formatMoney, formatMillions, ContractData, CalculationResult, YearlyData } from './utils/calculations';
 import { InfoTooltip } from './components/InfoTooltip';
 
 const CustomLegend = (props: any) => {
@@ -505,7 +505,7 @@ const App: React.FC = () => {
               <div className="h-80 w-full">
                 {results && (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
+                    <BarChart<YearlyData>
                       data={results.yearlyBreakdown}
                       margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                     >
@@ -538,19 +538,19 @@ const App: React.FC = () => {
                         ]}
                       />
                       <ReferenceLine x={`Year ${formData.years}`} stroke="red" strokeDasharray="3 3" />
-                      <Bar 
-                        dataKey="payoutReceived" 
-                        name="Cash Received" 
-                        fill="#94a3b8" 
+                      <Bar<YearlyData>
+                        dataKey="payoutReceived"
+                        name="Cash Received"
+                        fill="#94a3b8"
                         radius={[4, 4, 0, 0]}
                         animationDuration={1200}
                         animationEasing="ease-out"
                       />
-                      <Bar 
-                        dataKey="cbtValue" 
-                        name="CBT Hit (Tax)" 
-                        fill="#3b82f6" 
-                        radius={[4, 4, 0, 0]} 
+                      <Bar<YearlyData>
+                        dataKey="cbtValue"
+                        name="CBT Hit (Tax)"
+                        fill="#3b82f6"
+                        radius={[4, 4, 0, 0]}
                         animationDuration={1200}
                         animationEasing="ease-out"
                       />
