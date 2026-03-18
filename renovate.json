@@ -66,6 +66,15 @@
       "description": "Group all lint/type-check tooling",
       "matchPackageNames": ["typescript", "@types/node"],
       "groupName": "dev-tooling"
+    },
+    {
+      "description": "Group all non-major dependency updates into one PR",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "all-non-major",
+      "groupSlug": "all-non-major"
     }
-  ]
+  ],
+  "lockFileMaintenance": {
+    "groupName": "all-non-major"
+  }
 }
