@@ -34,6 +34,12 @@ Single-page React + TypeScript app built with Vite. Calculates MLB Competitive B
 
 Tailwind CSS loaded via CDN script tag in `index.html` (not installed as a dependency). Uses Inter font from Google Fonts. Path alias `@/*` maps to project root.
 
+### Commit Conventions
+
+This project uses **conventional commits** with release-please for automated versioning. Dependency updates must use `fix(deps):` (not `chore(deps):`) so release-please recognizes them as releasable units. Only `feat`, `fix`, and `deps` prefixes trigger releases — `chore` and `build` do not.
+
+Renovate is configured to produce `fix(deps):` commits for all dependency PRs.
+
 ### Deployment
 
 Multi-stage Dockerfile builds with `npm ci && npm run build`, then serves static files with `serve` on port 3000. Designed for Raspberry Pi (ARM compatible). GitHub Actions handle Docker image publishing and release-please versioning.
