@@ -1,14 +1,17 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:best-practices",
-    "schedule:weekly"
+    "config:best-practices"
   ],
-  "semanticCommits": "enabled",
-  "semanticCommitType": "fix",
-  "semanticCommitScope": "deps",
+  "semanticCommitType": "deps",
+  "semanticCommitScope": null,
   "timezone": "America/Chicago",
-  "schedule": ["on Monday"],
+  "schedule": [
+    "on Monday"
+  ],
+  "automergeSchedule": [
+    "at any time"
+  ],
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "customManagers": [
@@ -34,54 +37,32 @@
   ],
   "packageRules": [
     {
+      "description": "Docker-compose - disable digest pinning",
       "matchFileNames": [
         "docker-compose.yml"
       ],
       "pinDigests": false
     },
     {
+      "description": "Group all non-major updates into a single PR",
       "matchUpdateTypes": [
         "minor",
         "patch",
         "pin",
-        "digest",
-        "lockFileMaintenance"
+        "digest"
       ],
+      "groupName": "all non-major dependencies",
       "automerge": true
     },
     {
-      "description": "Group React packages together",
-      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
-      "groupName": "react"
-    },
-    {
-      "description": "Group Tailwind CSS packages together",
-      "matchPackageNames": ["tailwindcss", "@tailwindcss/vite"],
-      "groupName": "tailwindcss"
-    },
-    {
-      "description": "Group Vite and its plugins together",
-      "matchPackageNames": ["vite", "@vitejs/plugin-react"],
-      "groupName": "vite"
-    },
-    {
-      "description": "Group all lint/type-check tooling",
-      "matchPackageNames": ["typescript", "@types/node"],
-      "groupName": "dev-tooling"
-    },
-    {
-      "description": "Group all non-major dependency updates into one PR",
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "groupName": "all-non-major",
-      "groupSlug": "all-non-major"
-    },
-    {
-      "description": "Group GitHub Actions updates",
-      "matchManagers": ["github-actions"],
-      "groupName": "github-actions"
+      "description": "Major updates - separate PRs for review",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false
     }
   ],
   "lockFileMaintenance": {
-    "groupName": "all-non-major"
+    "groupName": "all non-major dependencies"
   }
 }
