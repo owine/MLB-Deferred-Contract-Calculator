@@ -36,9 +36,9 @@ Tailwind CSS loaded via CDN script tag in `index.html` (not installed as a depen
 
 ### Commit Conventions
 
-This project uses **conventional commits** with release-please for automated versioning. Dependency updates must use `fix(deps):` (not `chore(deps):`) so release-please recognizes them as releasable units. Only `feat`, `fix`, and `deps` prefixes trigger releases — `chore` and `build` do not.
+This project uses **conventional commits** with release-please (manifest mode) for automated versioning. Only `feat`, `fix`, and `deps` prefixes trigger releases — `chore` and `build` do not. The `deps` type is configured in `release-please-config.json` under `changelog-sections`.
 
-Renovate is configured to produce `fix(deps):` commits for all dependency PRs.
+Renovate is configured to produce `deps:` commits for all dependency PRs (via `semanticCommitType: "deps"` in `renovate.json`).
 
 ### Deployment
 
