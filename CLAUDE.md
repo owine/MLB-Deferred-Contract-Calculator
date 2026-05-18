@@ -32,13 +32,13 @@ Single-page React + TypeScript app built with Vite. Calculates MLB Competitive B
 
 ### Styling
 
-Tailwind CSS loaded via CDN script tag in `index.html` (not installed as a dependency). Uses Inter font from Google Fonts. Path alias `@/*` maps to project root.
+Tailwind CSS v4 is a real dependency, wired through the `@tailwindcss/vite` plugin (see `vite.config.ts`). `style.css` is a single `@import "tailwindcss";` line, imported by `index.tsx`. There is no `tailwind.config.*` or PostCSS config — v4 is zero-config. Uses Inter font from Google Fonts (linked in `index.html`). Path alias `@/*` maps to project root.
 
 ### Commit Conventions
 
 This project uses **conventional commits** with release-please (manifest mode) for automated versioning. Only `feat`, `fix`, and `deps` prefixes trigger releases — `chore` and `build` do not. The `deps` type is configured in `release-please-config.json` under `changelog-sections`.
 
-Renovate is configured to produce `deps:` commits for all dependency PRs (via `semanticCommitType: "deps"` in `renovate.json`).
+Renovate produces `deps:` commits for all dependency PRs. `renovate.json` only extends the shared `owine/renovate-config` presets (base + `:automerge` + `:node` + `:docker`); `semanticCommitType: "deps"`, scheduling, automerge, and the Dockerfile `npm install -g` custom manager all come from those presets rather than being defined locally.
 
 ### Deployment
 
