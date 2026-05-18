@@ -1,68 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:best-practices"
-  ],
-  "semanticCommitType": "deps",
-  "semanticCommitScope": null,
-  "timezone": "America/Chicago",
-  "schedule": [
-    "on Monday"
-  ],
-  "automergeSchedule": [
-    "at any time"
-  ],
-  "prHourlyLimit": 0,
-  "prConcurrentLimit": 0,
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/^Dockerfile$/"
-      ],
-      "matchStrings": [
-        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\nRUN npm install -g \\S+@(?<currentValue>\\S+)"
-      ],
-      "versioningTemplate": "npm"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/^index\\.html$/"
-      ],
-      "matchStrings": [
-        "<!--\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s+versioning=(?<versioning>\\S+)\\s*-->\\n\\s*<script src=\"https://cdn\\.tailwindcss\\.com/(?<currentValue>[^\"]+)\""
-      ]
-    }
-  ],
-  "packageRules": [
-    {
-      "description": "Docker-compose - disable digest pinning",
-      "matchFileNames": [
-        "docker-compose.yml"
-      ],
-      "pinDigests": false
-    },
-    {
-      "description": "Group all non-major updates into a single PR",
-      "matchUpdateTypes": [
-        "minor",
-        "patch",
-        "pin",
-        "digest"
-      ],
-      "groupName": "all non-major dependencies",
-      "automerge": true
-    },
-    {
-      "description": "Major updates - separate PRs for review",
-      "matchUpdateTypes": [
-        "major"
-      ],
-      "automerge": false
-    }
-  ],
-  "lockFileMaintenance": {
-    "groupName": "all non-major dependencies"
-  }
+    "github>owine/renovate-config",
+    "github>owine/renovate-config:automerge",
+    "github>owine/renovate-config:node",
+    "github>owine/renovate-config:docker"
+  ]
 }
