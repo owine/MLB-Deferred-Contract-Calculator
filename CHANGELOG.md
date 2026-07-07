@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.16](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.2.15...v0.2.16) (2026-07-07)
+
+
+### Bug Fixes
+
+* update all non-major dependencies ([#117](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/117)) ([d8b7efd](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/d8b7efdd4e16ca7f82ae3a266ed4c8b4fe8c1bf1))
+
+
+### Dependencies
+
+* lock file maintenance ([#114](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/114)) ([fdfe717](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/fdfe717ab2f0b53b94d4cccdbb8ccf3f7f648968))
+* lock file maintenance ([#119](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/119)) ([64b4e72](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/64b4e7204943e6790ddf4abe7ff05d8ab414b6cd))
+* update dependency recharts to v3.9.2 ([#121](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/121)) ([1fc1cdc](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/1fc1cdc1fbc8176c5e65702e2312a65213dbc774))
+* update docker/login-action action to v4.4.0 ([#120](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/120)) ([2ec6cc0](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/2ec6cc0e02d10e861c0c3d9aa1f4c3db647735e2))
+
 ## [0.2.15](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.2.14...v0.2.15) (2026-06-29)
 
 
