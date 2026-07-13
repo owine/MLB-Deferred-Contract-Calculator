@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.17](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.2.16...v0.2.17) (2026-07-13)
+
+
+### Dependencies
+
+* update all non-major dependencies ([#124](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/124)) ([e103669](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/e103669fcb676505ce73f4843edd96a600a5b5d7))
+* update dependency vite to v8.1.4 ([#125](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/125)) ([c7b5524](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/c7b5524c6e27a8941b17a85ea2f339b2e8702b33))
+
 ## [0.2.16](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.2.15...v0.2.16) (2026-07-07)
 
 
