@@ -1,0 +1,23 @@
+# Release-age soak lives in Renovate, NOT here.
+#
+# The shared preset (github>owine/renovate-config) already gates every update
+# on age. This file deliberately does NOT set `minimumReleaseAge`: a second,
+# stricter soak here would let Renovate bump package.json to a version pnpm was
+# then forbidden to install, stranding the lockfile and blocking the PR. No
+# other owine pnpm repo sets that key.
+#
+# preferFrozenLockfile: CI safety; install errors if the lockfile drifts.
+preferFrozenLockfile: true
+
+# Build-script allowlist. pnpm 11 defaults strictDepBuilds: true, so any
+# package whose install/build script is needed must be listed here (with
+# ignore-scripts=true in .npmrc, scripts are off unless re-enabled here).
+# Each entry runs arbitrary code at install time, so keep this minimal.
+#
+# Verified empty: a clean `pnpm install --config.strict-dep-builds=true` exits
+# 0 with zero gated build scripts, and `pnpm run build` succeeds. esbuild (via
+# Vite) and @tailwindcss/oxide (via @tailwindcss/vite) ship their native
+# binaries as prebuilt, platform-specific optionalDependencies — pnpm just
+# extracts them, so there is no postinstall compile step to allow. Add an
+# entry here only if a future dependency's build actually fails without it.
+allowBuilds: {}
