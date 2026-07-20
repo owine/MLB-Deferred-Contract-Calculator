@@ -10,7 +10,7 @@ WORKDIR /app
 # package.json "packageManager" exactly, otherwise Corepack would try to
 # auto-fetch the pinned version at runtime.
 # renovate: datasource=npm depName=pnpm
-ARG PNPM_VERSION=11.13.1
+ARG PNPM_VERSION=11.15.1
 RUN corepack enable && corepack prepare pnpm@$PNPM_VERSION --activate
 
 # Copy manifests, lockfile, and policy files first so the install layer stays
