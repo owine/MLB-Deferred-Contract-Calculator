@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.1](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.3.0...v0.3.1) (2026-07-27)
+
+
+### Dependencies
+
+* update actions/checkout action to v7.0.1 ([#140](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/140)) ([e23e5f9](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/e23e5f92318df304bff16e073f2942c6bc651501))
+* update all non-major dependencies ([#144](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/144)) ([05e8e48](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/05e8e488d85ffcb623bffbd1bf95a4fc9bf44b4a))
+* update dependency @vitejs/plugin-react to v6.0.4 ([#141](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/141)) ([c6b81da](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/c6b81daec5ec135367e12a3d65dc28db58f302c9))
+* update dependency pnpm to v11.17.0 ([#145](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/145)) ([1041acb](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/1041acbc46e453f9b62a466bfe9691b142ceab49))
+* update docker/login-action action to v4.5.0 ([#146](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/146)) ([24d5f60](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/24d5f600895db8a704a14dd38f6a9c9aa13d64bb))
+* update docker/login-action action to v4.5.1 ([#147](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/147)) ([bb3f9ff](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/bb3f9ff7608a3d28ed1feeeac3de382761073821))
+* update react to v19.2.8 ([#142](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/142)) ([e29218d](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/e29218d5e61388594d8d8b8d28672ac000cbe8de))
+
 ## [0.3.0](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.2.17...v0.3.0) (2026-07-20)
 
 
