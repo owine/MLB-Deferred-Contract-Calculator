@@ -1,5 +1,9 @@
 # Dependencies
-node_modules
+# Globbed rather than bare: the Dockerfile does `COPY . .` after `pnpm install`,
+# so a nested node_modules (e.g. once a workspace package is added) would
+# clobber the image's install with host artifacts. `**/` matches zero or more
+# directories, so this still covers the root case today.
+**/node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
