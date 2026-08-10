@@ -18,7 +18,7 @@ jobs:
       # `cache: pnpm` can find the pnpm binary. The version comes from the
       # `packageManager` field in package.json. `install: false` is required —
       # it defaults to true, which would duplicate the explicit install below.
-      - uses: pnpm/setup@c9883cc79df532ad1a7b81bf9ab944ceb090d65c # v2.0.0
+      - uses: pnpm/setup@4700d737c3d7a2e7199f3d42a920f0bf7f34e411 # v2.0.1
         with:
           install: false
 
