@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.4](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.3.3...v0.3.4) (2026-08-17)
+
+
+### Dependencies
+
+* update dependency lucide-react to v1.31.0 ([#168](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/168)) ([1bd113b](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/1bd113ba4825de1a71816c031f7c673a71445d9f))
+* update dependency pnpm to v11.21.0 ([#169](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/169)) ([186c8e0](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/186c8e069188039f808bd816c4e24f0f3a91bdde))
+* update pnpm/setup action to v2.0.2 ([#167](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/167)) ([bf2f072](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/bf2f07207292221996b191efef38380486e176cc))
+
 ## [0.3.3](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.3.2...v0.3.3) (2026-08-10)
 
 
