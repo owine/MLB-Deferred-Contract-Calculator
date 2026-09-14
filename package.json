@@ -23,8 +23,8 @@
     "vite": "8.2.2"
   },
   "engines": {
-    "node": "24.20.0",
-    "pnpm": "12.3.4"
+    "node": "24.21.0",
+    "pnpm": "12.4.1"
   },
-  "packageManager": "pnpm@12.3.4"
+  "packageManager": "pnpm@12.4.1"
 }
