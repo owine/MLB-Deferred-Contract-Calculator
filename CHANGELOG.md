@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.4.1...v0.4.2) (2026-09-18)
+
+
+### Bug Fixes
+
+* pin Trivy to v0.74.0 so the fs scan sees pnpm v12 lockfiles ([#200](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/200)) ([9dea6df](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/9dea6dfa02cc6969c3fbaa693d0866ec3759b0e7))
+
 ## [0.4.1](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.4.0...v0.4.1) (2026-09-14)
 
 
