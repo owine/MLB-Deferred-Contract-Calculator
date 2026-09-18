@@ -76,16 +76,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: TEMP VERIFY - runner identity
-        run: |
-          echo "runner_label_from_matrix=${{ matrix.runner }}"
-          echo "platform=${{ matrix.platform }}"
-          echo "RUNNER_NAME=$RUNNER_NAME RUNNER_ARCH=$RUNNER_ARCH RUNNER_OS=$RUNNER_OS"
-          echo "uname -m: $(uname -m)"
-          echo "lsb_release: $(. /etc/os-release && echo "$VERSION_ID $VERSION_CODENAME")"
-          echo "qemu binfmt handlers registered:"
-          ls /proc/sys/fs/binfmt_misc/ 2>/dev/null || echo "(none)"
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
@@ -130,9 +120,101 @@ jobs:
           # `github.ref == 'refs/heads/main'` because they build on every main
           # push; that condition would be false for every tag run here and
           # would never push anything.
-          push: false
+          outputs: type=image,name=${{ steps.image.outputs.name }},push-by-digest=true,name-canonical=true,push=true
           # Per-arch cache scopes. A shared `type=gha` scope would have both
           # legs writing the same cache manifest concurrently and clobbering
           # each other's entries.
           cache-from: type=gha,scope=docker-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=docker-${{ matrix.platform }}
+
+      - name: Export digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: digests-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Stitch the per-arch digests into one multi-arch manifest and apply the
+  # release tags. These are the tag rules the old single-job build used,
+  # unchanged -- including `latest`, whose {{is_default_branch}} does evaluate
+  # true on a tag push (the v0.4.0 run tagged latest).
+  publish-manifest:
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image name (lowercase)
+        id: image
+        env:
+          REPO: ${{ env.IMAGE_NAME }}
+        run: |
+          echo "name=${REGISTRY}/${REPO,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Create multi-arch manifest and push
+        working-directory: /tmp/digests
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          METADATA: ${{ steps.meta.outputs.json }}
+        run: |
+          # Arrays rather than unquoted command substitution so word splitting
+          # isn't load-bearing (SC2046).
+          tags=()
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            tags+=(-t "$tag")
+          done < <(jq -r '.tags[]' <<< "$METADATA")
+          if [ "${#tags[@]}" -eq 0 ]; then
+            echo "::error::metadata-action produced no tags; refusing to push an untagged manifest."
+            exit 1
+          fi
+          images=()
+          for digest in *; do
+            images+=("${IMAGE}@sha256:${digest}")
+          done
+          docker buildx imagetools create "${tags[@]}" "${images[@]}"
+
+      - name: Inspect manifest
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          docker buildx imagetools inspect "${IMAGE}:${VERSION}"
