@@ -55,11 +55,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Hand-maintained: Renovate's runner extraction only reads literal
-        # `runs-on:` values, so these `runner` labels are invisible to it.
-        # Update them together with the `runs-on:` labels in this file,
-        # ci.yml and release-please.yml whenever the runner image moves, or
-        # the build goes split-brain with the two arches on different images.
+        # Renovate's built-in github-actions manager CANNOT see these labels:
+        # it reads `runs-on:` off parsed YAML, where this job's value is the
+        # literal string `${{ matrix.runner }}` with no version in it. Left
+        # untracked that fails GREEN -- the two arches drift onto different
+        # Ubuntu releases, both runner images work, and nothing flags the
+        # mismatch (doc-scanner#209).
+        # They ARE tracked now, by a second `github-runners` customManager in
+        # the shared preset (owine/renovate-config#103), which keys on the
+        # `runner:` key and captures with the same shape as the built-in
+        # manager, so these land in the SAME PR as the literal `runs-on:`
+        # values across this file, ci.yml and release-please.yml. So do not
+        # bump by hand -- but keep the shape: one line per label,
+        # `runner: <os>-<version>`, version's first character a digit, suffix
+        # kept attached (`26.04-arm` is its own datasource version, not
+        # `26.04` decorated). Renaming the key, moving a label behind an env
+        # var, or splitting it across lines un-tracks it again, silently and
+        # with no error anywhere.
         include:
           - platform: linux/amd64
             runner: ubuntu-26.04
