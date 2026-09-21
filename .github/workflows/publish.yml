@@ -37,7 +37,6 @@ jobs:
           # because nothing was vulnerable. v0.74.0 reads both documents
           # (verified: 123 packages extracted). Remove this pin once a
           # trivy-action release ships v0.74.0+ as its default.
-          # renovate: datasource=github-releases depName=aquasecurity/trivy
           version: v0.74.0
 
   # Native per-arch builds. Previously a single job built
