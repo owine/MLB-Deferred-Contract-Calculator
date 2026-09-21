@@ -14,20 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # pnpm/setup MUST run before setup-node so that setup-node's
-      # `cache: pnpm` can find the pnpm binary. The version comes from the
-      # `packageManager` field in package.json. `install: false` is required —
-      # it defaults to true, which would duplicate the explicit install below.
-      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+      # One step supplies pnpm (from `packageManager`), Node (auto-detected
+      # from .nvmrc), the pnpm store cache, and the frozen install.
+      # `require-lockfile` also fails the job when no lockfile exists at all.
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
         with:
-          install: false
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
+          cache: true
+          require-lockfile: true
 
       - name: Check for known vulnerabilities
         run: pnpm audit --prod --audit-level=moderate
