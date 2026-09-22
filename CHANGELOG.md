@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.3](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.4.2...v0.4.3) (2026-09-22)
+
+
+### Dependencies
+
+* update all non-major dependencies ([#208](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/208)) ([488b03a](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/488b03a2a3f5eec92048e142da070e9fb6aeaa9e))
+* update dependency @types/node to v24.13.6 ([#212](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/212)) ([c0d76f6](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/c0d76f6cc74b42d3eb954c8b6b96ba86fb8fac42))
+* update dependency pnpm to v12.5.1 ([#211](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/211)) ([f189535](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/f189535e3365d7a2acd7f8e5613e9b7a7508d3e7))
+* update toolchain-versions ([#207](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/207)) ([578b0d1](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/578b0d12d80c4e70b58bfd8d10881a01648d5cca))
+
 ## [0.4.2](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.4.1...v0.4.2) (2026-09-18)
 
 
