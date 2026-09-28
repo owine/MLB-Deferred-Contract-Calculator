@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- **Dev server:** `npm run dev` (serves on port 3000, binds 0.0.0.0)
-- **Build:** `npm run build` (Vite production build to `dist/`)
-- **Preview build:** `npm run preview`
+- **Dev server:** `pnpm run dev` (serves on port 3000, binds 0.0.0.0)
+- **Build:** `pnpm run build` (Vite production build to `dist/`)
+- **Preview build:** `pnpm run preview`
 - **Docker:** `docker-compose up -d` (builds and serves on port 3000)
 
 There are no tests, linting, or formatting configured.
@@ -42,4 +42,4 @@ Renovate produces `deps:` commits for all dependency PRs. `renovate.json` only e
 
 ### Deployment
 
-Multi-stage Dockerfile builds with `npm ci && npm run build`, then serves static files with `serve` on port 3000. Designed for Raspberry Pi (ARM compatible). GitHub Actions handle Docker image publishing and release-please versioning.
+Multi-stage Dockerfile. The build stage activates pnpm through Corepack (`PNPM_VERSION` must match `packageManager` in `package.json`), copies the manifests, lockfile, `pnpm-workspace.yaml` and `.npmrc`, then runs `pnpm install --frozen-lockfile` and `pnpm run build`. The runtime stage copies only `dist/` and serves it with `serve` on port 3000. It installs `serve` with `npm install -g serve@VERSION` on purpose: that stage has no Corepack/pnpm set up, and the shared Renovate `docker` preset's custom manager tracks exactly that `npm install -g pkg@VERSION` pattern. Designed for Raspberry Pi (ARM compatible). GitHub Actions handle Docker image publishing and release-please versioning.
