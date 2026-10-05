@@ -37,7 +37,7 @@ jobs:
           # because nothing was vulnerable. v0.74.0 reads both documents
           # (verified: 123 packages extracted). Remove this pin once a
           # trivy-action release ships v0.74.0+ as its default.
-          version: v0.74.0
+          version: v0.75.0
 
   # Native per-arch builds. Previously a single job built
   # linux/amd64,linux/arm64 on one x64 runner; with no setup-qemu-action step
