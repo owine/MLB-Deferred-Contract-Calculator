@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.6](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.4.5...v0.4.6) (2026-10-06)
+
+
+### Dependencies
+
+* update dependency pnpm to v12.9.0 ([#226](https://github.com/owine/MLB-Deferred-Contract-Calculator/issues/226)) ([a5d5c1c](https://github.com/owine/MLB-Deferred-Contract-Calculator/commit/a5d5c1ca81024b918d98c27877c43b02aebfcca3))
+
 ## [0.4.5](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.4.4...v0.4.5) (2026-10-05)
 
 
