@@ -2,7 +2,7 @@
 # Compatible with Raspberry Pi (ARM architecture)
 
 # Build stage
-FROM node:24.21.0-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS builder
+FROM node:24.22.0-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ WORKDIR /app
 # package.json "packageManager" exactly, otherwise Corepack would try to
 # auto-fetch the pinned version at runtime.
 # renovate: datasource=npm depName=pnpm
-ARG PNPM_VERSION=12.11.2
+ARG PNPM_VERSION=12.14.0
 RUN corepack enable && corepack prepare pnpm@$PNPM_VERSION --activate
 
 # Copy manifests, lockfile, and policy files first so the install layer stays
@@ -29,7 +29,7 @@ COPY . .
 RUN pnpm run build
 
 # Production stage
-FROM node:24.21.0-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
+FROM node:24.22.0-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f
 
 WORKDIR /app
 
