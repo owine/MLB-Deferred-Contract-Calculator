@@ -1,5 +1,7 @@
 # Changelog
 
+Releases after v0.4.7 are documented in [GitHub Releases](https://github.com/owine/MLB-Deferred-Contract-Calculator/releases). This file is frozen and covers changes up to v0.4.7.
+
 ## [0.4.7](https://github.com/owine/MLB-Deferred-Contract-Calculator/compare/v0.4.6...v0.4.7) (2026-10-19)
 
 
