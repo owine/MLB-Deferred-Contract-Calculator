@@ -36,10 +36,17 @@ Tailwind CSS v4 is a real dependency, wired through the `@tailwindcss/vite` plug
 
 ### Commit Conventions
 
-This project uses **conventional commits** with release-please (manifest mode) for automated versioning. Only `feat`, `fix`, and `deps` prefixes trigger releases — `chore` and `build` do not. The `deps` type is configured in `release-please-config.json` under `changelog-sections`.
+This project uses **conventional commits** and squash-merges only, so the PR title becomes the commit subject. Releases come from **release-drafter**: every push to `main` refreshes one draft GitHub Release, and a human publishes it to release. `.github/release-drafter.yml` only `_extends` the shared `owine/renovate-config:/release-drafter.yml`, so don't add local categories or replacers. Sections and version bump are read from the **PR title**:
+
+- `feat` → minor; `fix`, `perf`, `revert`, `deps` → patch.
+- `chore`, `ci`, `docs`, `test`, `refactor`, `build`, `style` are hidden. If only these merged, the draft reads `_No user-facing changes._`, so don't publish it.
+- A breaking change needs `!` **in the title** (`feat!:`). A `BREAKING CHANGE:` footer is ignored. While on `0.x`, a `!` drafts `1.0.0`.
+- A non-conventional title still shows up, unsectioned, and bumps patch.
+
+**GitHub Releases is the source of truth for versions and release notes.** `CHANGELOG.md` is frozen at v0.4.7. `package.json` `"version"` is no longer bumped and stays at `0.4.7`. The package is private and nothing reads the field (not the app, `vite.config.ts` or the Dockerfile), so leave it alone rather than treating it as the current version.
 
 Renovate produces `deps:` commits for all dependency PRs. `renovate.json` only extends the shared `owine/renovate-config` presets (base + `:automerge` + `:node` + `:docker`); `semanticCommitType: "deps"`, scheduling, automerge, and the Dockerfile `npm install -g` custom manager all come from those presets rather than being defined locally.
 
 ### Deployment
 
-Multi-stage Dockerfile. The build stage activates pnpm through Corepack (`PNPM_VERSION` must match `packageManager` in `package.json`), copies the manifests, lockfile, `pnpm-workspace.yaml` and `.npmrc`, then runs `pnpm install --frozen-lockfile` and `pnpm run build`. The runtime stage copies only `dist/` and serves it with `serve` on port 3000. It installs `serve` with `npm install -g serve@VERSION` on purpose: that stage has no Corepack/pnpm set up, and the shared Renovate `docker` preset's custom manager tracks exactly that `npm install -g pkg@VERSION` pattern. Designed for Raspberry Pi (ARM compatible). GitHub Actions handle Docker image publishing and release-please versioning.
+Multi-stage Dockerfile. The build stage activates pnpm through Corepack (`PNPM_VERSION` must match `packageManager` in `package.json`), copies the manifests, lockfile, `pnpm-workspace.yaml` and `.npmrc`, then runs `pnpm install --frozen-lockfile` and `pnpm run build`. The runtime stage copies only `dist/` and serves it with `serve` on port 3000. It installs `serve` with `npm install -g serve@VERSION` on purpose: that stage has no Corepack/pnpm set up, and the shared Renovate `docker` preset's custom manager tracks exactly that `npm install -g pkg@VERSION` pattern. Designed for Raspberry Pi (ARM compatible). GitHub Actions handle Docker image publishing and release drafting. `publish.yml` runs on `release: published`, i.e. when the draft is published. It does not run on tag pushes. It tags the multi-arch image `X.Y.Z`, `X.Y`, `X` and `latest` from the release tag.

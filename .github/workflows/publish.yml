@@ -1,9 +1,13 @@
 name: Publish Docker Image
 
+# A human publishing the release-drafter draft fires `release: published`
+# (as that human, so it does trigger workflows). GITHUB_REF is then
+# refs/tags/vX.Y.Z, which is what metadata-action's type=semver keys on.
+# There is deliberately no `push: tags:` trigger alongside it: publishing
+# creates the tag, and a tag trigger would build every release twice.
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
   workflow_dispatch:
 
 env:
@@ -64,7 +68,7 @@ jobs:
         # the shared preset (owine/renovate-config#103), which keys on the
         # `runner:` key and captures with the same shape as the built-in
         # manager, so these land in the SAME PR as the literal `runs-on:`
-        # values across this file, ci.yml and release-please.yml. So do not
+        # values across this file, ci.yml and release-drafter.yml. So do not
         # bump by hand -- but keep the shape: one line per label,
         # `runner: <os>-<version>`, version's first character a digit, suffix
         # kept attached (`26.04-arm` is its own datasource version, not
@@ -126,11 +130,11 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Unconditional push: this workflow only runs on `v*` tags and manual
-          # dispatch. The fleet references gate this on
+          # Unconditional push: this workflow only runs on published releases
+          # and manual dispatch. The fleet references gate this on
           # `github.ref == 'refs/heads/main'` because they build on every main
-          # push; that condition would be false for every tag run here and
-          # would never push anything.
+          # push; that condition would be false for every release run here
+          # (ref is refs/tags/vX.Y.Z) and would never push anything.
           outputs: type=image,name=${{ steps.image.outputs.name }},push-by-digest=true,name-canonical=true,push=true
           # Per-arch cache scopes. A shared `type=gha` scope would have both
           # legs writing the same cache manifest concurrently and clobbering
@@ -155,8 +159,12 @@ jobs:
 
   # Stitch the per-arch digests into one multi-arch manifest and apply the
   # release tags. These are the tag rules the old single-job build used,
-  # unchanged -- including `latest`, whose {{is_default_branch}} does evaluate
-  # true on a tag push (the v0.4.0 run tagged latest).
+  # unchanged. On a release run `latest` comes from the default
+  # `flavor: latest=auto`, which type=semver sets for any non-prerelease
+  # version -- NOT from the type=raw rule: {{is_default_branch}} compares the
+  # ref to `main`, so it is false on refs/tags/*. That raw rule only fires on
+  # a workflow_dispatch from main, where it is the sole tag. A dispatch from
+  # any other branch yields no tags and stops at the guard below.
   publish-manifest:
     needs: build
     runs-on: ubuntu-26.04
