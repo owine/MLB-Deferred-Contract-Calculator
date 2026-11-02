@@ -10,7 +10,7 @@ Originally created by [WarrenAdams8](https://github.com/WarrenAdams8/MLB-Deferre
 
 ## Run Locally
 
-**Prerequisites:** the exact Node.js version in `package.json` `engines.node` (`.npmrc` sets `engine-strict`, so other versions fail to install) and pnpm. Run `corepack enable` once to get the pnpm version pinned in `package.json`.
+**Prerequisites:** the exact Node.js version in `package.json` `engines.node` (`.npmrc` sets `engine-strict`, so other versions fail to install) and the pnpm version pinned in `package.json` `packageManager`. Node 25+ no longer bundles Corepack, so install it with `npm install -g pnpm@<version>`.
 
 ```bash
 pnpm install

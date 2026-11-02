@@ -2,16 +2,18 @@
 # Compatible with Raspberry Pi (ARM architecture)
 
 # Build stage
-FROM node:24.22.2-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS builder
+FROM node:26.12.1-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS builder
 
 WORKDIR /app
 
-# Enable pnpm via Corepack (bundled with Node). The version must match
-# package.json "packageManager" exactly, otherwise Corepack would try to
-# auto-fetch the pinned version at runtime.
+# Install pnpm from npm. Node 25+ no longer bundles Corepack, so npm (still
+# bundled) is the dependency-free way to get it. The version must match
+# package.json "packageManager" exactly, otherwise pnpm would try to switch
+# to the pinned version at runtime. The shared Renovate preset tracks
+# `ARG PNPM_VERSION=` in lockstep with packageManager (toolchain-versions).
 # renovate: datasource=npm depName=pnpm
 ARG PNPM_VERSION=12.16.1
-RUN corepack enable && corepack prepare pnpm@$PNPM_VERSION --activate
+RUN npm install -g pnpm@$PNPM_VERSION
 
 # Copy manifests, lockfile, and policy files first so the install layer stays
 # cached when only source changes. .npmrc (engine-strict, ignore-scripts) and
@@ -29,7 +31,7 @@ COPY . .
 RUN pnpm run build
 
 # Production stage
-FROM node:24.22.2-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
+FROM node:26.12.1-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797
 
 WORKDIR /app
 
