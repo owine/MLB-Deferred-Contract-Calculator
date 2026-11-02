@@ -11,9 +11,12 @@ WORKDIR /app
 # package.json "packageManager" exactly, otherwise pnpm would try to switch
 # to the pinned version at runtime. The shared Renovate preset tracks
 # `ARG PNPM_VERSION=` in lockstep with packageManager (toolchain-versions).
+# --ignore-scripts: .npmrc (ignore-scripts=true) is not copied in yet, so set
+# it explicitly. pnpm supports script-less installs (its placeholder bins run
+# through Node), which is also how Corepack ran it.
 # renovate: datasource=npm depName=pnpm
 ARG PNPM_VERSION=12.16.1
-RUN npm install -g pnpm@$PNPM_VERSION
+RUN npm install -g pnpm@$PNPM_VERSION --ignore-scripts
 
 # Copy manifests, lockfile, and policy files first so the install layer stays
 # cached when only source changes. .npmrc (engine-strict, ignore-scripts) and
