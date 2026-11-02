@@ -9,8 +9,8 @@ WORKDIR /app
 # Install pnpm from npm. Node 25+ no longer bundles Corepack, so npm (still
 # bundled) is the dependency-free way to get it. The version must match
 # package.json "packageManager" exactly, otherwise pnpm would try to switch
-# to the pinned version at runtime. The shared Renovate preset tracks
-# `ARG PNPM_VERSION=` in lockstep with packageManager (toolchain-versions).
+# to the pinned version at runtime. The shared Renovate preset tracks the
+# PNPM_VERSION build arg in lockstep with packageManager (toolchain-versions).
 # --ignore-scripts: .npmrc (ignore-scripts=true) is not copied in yet, so set
 # it explicitly. pnpm supports script-less installs (its placeholder bins run
 # through Node), which is also how Corepack ran it.
@@ -38,9 +38,11 @@ FROM node:26.12.1-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64
 
 WORKDIR /app
 
-# Install serve globally for serving static files
+# Install serve globally for serving static files. --ignore-scripts goes AFTER
+# pkg@VERSION: the shared preset's regex needs `-g` immediately followed by
+# the pkg@VERSION token, so a flag in between silently un-tracks the line.
 # renovate: datasource=npm depName=serve
-RUN npm install -g serve@14.2.6
+RUN npm install -g serve@14.2.6 --ignore-scripts
 
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
