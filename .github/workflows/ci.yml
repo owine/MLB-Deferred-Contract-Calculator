@@ -24,3 +24,55 @@ jobs:
 
       - name: Check for known vulnerabilities
         run: pnpm audit --prod --audit-level=moderate
+
+  # Build the image on every PR. publish.yml only runs on a published release,
+  # so without this job a Dockerfile-only change (e.g. a Renovate Node-major
+  # bump like #262, which removed Corepack out from under `corepack enable`)
+  # shows all-green and first fails at release time. Build only, no push.
+  # Both arches build natively, matching publish.yml, because the image's main
+  # target is a Raspberry Pi (arm64).
+  docker-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Keep the `runner: <os>-<version>` one-line shape: the shared
+        # preset's `github-runners` customManager keys on it (see the long
+        # note in publish.yml). Any other shape silently un-tracks the label.
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-26.04
+          - platform: linux/arm64
+            runner: ubuntu-26.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: false
+          load: true
+          tags: mlb-calc:ci
+
+      # Proves the runtime stage works too (serve installed and on PATH,
+      # dist/ copied), not just that the builder stage compiled.
+      - name: Smoke test
+        run: |
+          docker run -d --name app -p 3000:3000 mlb-calc:ci
+          for _ in $(seq 30); do
+            curl -sf -o /dev/null http://localhost:3000/ && break
+            sleep 1
+          done
+          if ! curl -sf http://localhost:3000/ | grep -q '<title>MLB Deferred Contract Calculator</title>'; then
+            echo "::error::Container did not serve the app on :3000"
+            docker logs app
+            exit 1
+          fi
