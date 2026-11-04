@@ -1,8 +1,10 @@
-# MLB Deferred Contract Calculator
+# MLB Contract Calculator
 
-A calculator for determining the Competitive Balance Tax (CBT / Luxury Tax) implications of deferred money in MLB contracts, based on Article XXIII of the 2022-2026 Basic Agreement.
+A calculator for the Competitive Balance Tax (CBT / luxury tax) charge of any MLB contract under Article XXIII of the 2022–2026 Basic Agreement: year-by-year salaries, signing bonuses, club/mutual/vesting/player/dual options with buyouts, opt-outs (including the Valley Charge), earned bonuses, and deferred money (discounted at the Imputed Loan Interest Rate), plus the Article XVI funding requirement.
 
-Calculates present value of deferred compensation using the Federal Mid-Term Rate, shows year-by-year breakdowns of cash salary vs. CBT hit, and visualizes the financial timeline across playing and payout years. Includes preset scenarios for notable contracts like Shohei Ohtani's $700M deal with the Dodgers.
+Pick what happens — options exercised or declined, an opt-out taken — and see the CBT charge season by season, with every line item traced to the CBA rule behind it and a callout for every result that depends on an interpretation. Presets reproduce the published figures for real contracts (Ohtani, Scherzer, Snell, Bregman, Guerrero Jr., Soto, Bellinger, Tucker, Alonso, Bichette, Jansen, Kim), each with its sources.
+
+The rules, their CBA citations and every judgment call are documented in [`docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md`](docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md).
 
 ## Credits
 
@@ -49,4 +51,3 @@ docker run -d --name mlb-calculator --restart unless-stopped -p 3000:3000 mlb-ca
 ### Reverse Proxy
 
 The container serves on port 3000. Point your reverse proxy (nginx, Caddy, Traefik, etc.) to `http://localhost:3000`.
-

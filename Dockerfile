@@ -1,4 +1,4 @@
-# Multi-stage build for MLB Deferred Contract Calculator
+# Multi-stage build for MLB Contract Calculator
 # Compatible with Raspberry Pi (ARM architecture)
 
 # Build stage
