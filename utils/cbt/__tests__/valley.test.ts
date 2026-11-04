@@ -39,6 +39,17 @@ describe('Valley Charge (V1–V6, V10, V11)', () => {
     expect(v.allocation.get(Y1 + 2)).toBeCloseTo(1.5, 9);
   });
 
+  it('V2/V11: the 80% Figure uses the contract’s real signing bonus; a deemed buyout only enters the V3 floor (Bichette shape)', () => {
+    const v = valleyOf(
+      build([{ currentSalary: 2 }, { currentSalary: 42 }, { currentSalary: 42 }], {
+        signingBonus: { amount: 40, payments: [] },
+        optOuts: [{ afterSeason: Y1, payment: 5 }, { afterSeason: Y1 + 1, payment: 5 }],
+      }),
+    );
+    // V2: 0.8 × (2 + 40) = 33.6; V3 floor with the buyout as deemed bonus: 0.75 × (2 + 40 + 5) = 35.25. Values 42 − 5 = 37 > 35.25.
+    expect(v.firstSuch).toBeNull();
+  });
+
   it('V10 W5: a non-guaranteed player option never triggers a Valley Charge', () => {
     expect(valleyOf(build([...guaranteed(3, 20), { currentSalary: 10, kind: 'player', buyout: 6 }])).firstSuch).toBeNull();
   });

@@ -68,6 +68,26 @@ export function deferralCosts(input: ContractInput, classes: SeasonClass[]): Def
     }
     unpaidPrincipal = queue.reduce((sum, t) => sum + t.remaining, 0);
     for (const pc of pieces) sumInto(costBySeason, pc.season, pc.cost);
+  } else if (attribution === 'prorata') {
+    // F4(c): the contract spreads each season's deferral across every payment, so each payment is split across
+    // the deferral seasons in proportion to their principal. Principal retired = cash / (1+s)^n (F7).
+    const owed = sortedSeasons(input).filter((r) => r.deferred > 0);
+    const total = owed.reduce((sum, r) => sum + r.deferred, 0);
+    let retired = 0;
+    if (total > 0) {
+      for (const p of sortedPayments) {
+        for (const r of owed) {
+          const cash = (p.amount * r.deferred) / total;
+          const n = p.year - r.season;
+          const principal = cash / Math.pow(1 + s / 100, n);
+          retired += principal;
+          pieces.push({ season: r.season, year: p.year, cash, cost: band ? principal : discount(cash, n, input.ilirPct) });
+        }
+      }
+    }
+    unpaidPrincipal = Math.max(0, total - retired);
+    excessCash = Math.max(0, retired - total);
+    for (const pc of pieces) sumInto(costBySeason, pc.season, pc.cost);
   } else {
     // F4(b): attributed equally to each Guaranteed Year; each payment split equally (payment split: [CONV]).
     const g = classes.filter((c) => c.isGuaranteed).map((c) => c.season);
@@ -127,9 +147,10 @@ export function signingBonusCost(input: ContractInput, classes: SeasonClass[]): 
   return { cost, nominal: amount, deferredPieces };
 }
 
-/** Rules behind a charge that includes deferred cost (F2, F3, F4a|F4b, F5, F7). */
+/** Rules behind a charge that includes deferred cost (F2, F3, F4a|F4b|F4c, F5, F7). */
 export function deferralRuleIds(input: ContractInput): RuleId[] {
-  return ['F2', 'F3', input.deferral.attribution === 'sequential' ? 'F4a' : 'F4b', 'F5', 'F7'];
+  const mode: RuleId = input.deferral.attribution === 'sequential' ? 'F4a' : input.deferral.attribution === 'prorata' ? 'F4c' : 'F4b';
+  return ['F2', 'F3', mode, 'F5', 'F7'];
 }
 
 /** Rules behind the deferred part of the AAV: F2–F7 when a Guaranteed season has deferred cost, A7 when a bonus installment is discounted. */

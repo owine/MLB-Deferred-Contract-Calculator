@@ -40,6 +40,9 @@ jobs:
       - name: Type-check engine
         run: pnpm run typecheck:engine
 
+      - name: Type-check project
+        run: pnpm run typecheck
+
       - name: Run tests
         run: pnpm test
 
@@ -89,7 +92,7 @@ jobs:
             curl -sf -o /dev/null http://localhost:3000/ && break
             sleep 1
           done
-          if ! curl -sf http://localhost:3000/ | grep -q '<title>MLB Deferred Contract Calculator</title>'; then
+          if ! curl -sf http://localhost:3000/ | grep -q '<title>MLB Contract Calculator</title>'; then
             echo "::error::Container did not serve the app on :3000"
             docker logs app
             exit 1

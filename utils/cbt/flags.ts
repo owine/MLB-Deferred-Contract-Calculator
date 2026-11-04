@@ -25,8 +25,8 @@ export function collectFlags(
     for (const r of ch.rules) if (RULES[r].tag !== 'TEXT' || r === 'V8') flag(r);
   }
   outcome.notes.forEach(flag); // END, O2NS: changed the result without a charge of their own
-  // D5: a 50% test or Valley value read a season that has deferred pay (per-season `deferred` is used only in sequential mode).
-  if (input.deferral.attribution === 'sequential' && classes.some((c) => c.rules.includes('D5') && (rows.get(c.season)?.deferred ?? 0) > 0))
+  // D5: a 50% test or Valley value read a season that has deferred pay (per-season `deferred` is used in sequential and pro-rata modes).
+  if (input.deferral.attribution !== 'unattributed' && classes.some((c) => c.rules.includes('D5') && (rows.get(c.season)?.deferred ?? 0) > 0))
     flag('D5');
   // F6: the 1.5-point band edge decided stated value vs discounting.
   if (deferral.pieces.length > 0 && Math.abs(Math.abs(input.deferral.statedInterestPct - input.ilirPct) - 1.5) < 1e-9) flag('F6');

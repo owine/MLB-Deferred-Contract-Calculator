@@ -40,12 +40,14 @@ export function computeValley(
     const hypG = hyp.filter((c) => c.isGuaranteed);
     const priorG = hypG.filter((c) => c.season < candidate.season);
     if (priorG.length === 0) continue;
-    const hypBuyout = selectDeemedBuyout(hyp).amount; // V11
+    // V11 applies only inside the V3 floor: there, option-year buyouts become deemed Signing Bonus.
+    const hypBuyout = selectDeemedBuyout(hyp).amount;
     if (hypBuyout !== actualBuyout) usedV11 = true;
-    const signingBonus = bonusCost + hypBuyout;
     const hypAav =
-      (hypG.reduce((s, c) => s + rows.get(c.season)!.currentSalary + cost(c.season), 0) + signingBonus) / hypG.length;
-    // V2 with V5: Signing Bonus attributed over the Guaranteed Years before the candidate.
+      (hypG.reduce((s, c) => s + rows.get(c.season)!.currentSalary + cost(c.season), 0) + bonusCost + hypBuyout) / hypG.length;
+    // V2 with V5: the contract's actual Signing Bonus (incl. buyouts actually deemed, A3–A5), attributed over the
+    // Guaranteed Years before the candidate.
+    const signingBonus = bonusCost + actualBuyout;
     const smallest = Math.min(
       ...priorG.map((c) => rows.get(c.season)!.currentSalary + signingBonus / priorG.length + cost(c.season)),
     );

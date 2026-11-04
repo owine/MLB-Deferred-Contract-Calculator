@@ -68,15 +68,19 @@ No rule enters the engine without a tag. Code comments cite the same section, an
 | F1 | **Deferred Compensation** = Salary payable **in a Contract Year after the last championship season** for which services are required. The last season depends on the scenario (options, opt-out). **Scope limit:** deferral payments, and any signing-bonus installment treated as deferred (A7), must fall after the last season of the **maximum term** (all options exercised). A payment inside a possible option year would switch between deferred and current pay depending on the scenario, and would reprice a signing-day AAV. No rule settles that, so such contracts are rejected with an explanatory error and listed in §2.8. Signing-bonus installments are classified automatically: on or before the last Guaranteed season they are current pay; after the maximum term they are A7. Using the calendar year to stand in for the Contract Year (Dec 2–Dec 1) is a convention. | [TEXT]; scope limit and calendar-year proxy [CONV] | E(6)(a), p.136; E(1), p.131 |
 | F2 | Deferred Compensation counts **as if paid in the season to which the contract attributes it**. If the contract does not attribute it, it is treated as attributed **equally to each of the Guaranteed Years**. This applies to any season, option years included. An option year's deferral counts only if that year is exercised or vested (O1, O6). | [TEXT] | E(6)(b)(i), p.136 |
 | F3 | If deferrals carry stated interest at an effective rate **within 1.5 percentage points of the ILIR**, they count at **stated value**, i.e., the principal. Otherwise the payments are increased by the stated interest rate and discounted to their **present value in the season to which they are attributed**, using the ILIR (D2). A 0%-interest deferral therefore counts at full stated value whenever the ILIR ≤ 1.5%. | [TEXT] | E(6)(b)(ii), p.136–137 |
-| F4 | Attribution modes: **(a) Sequential.** The contract maps seasons to payments in order: the first-earned money is paid first, and a payment is split across seasons where needed. **(b) Not attributed.** Each season's deferral is the total ÷ the number of Guaranteed Years (F2), and each payment is split equally across the Guaranteed Years. In mode (b) the per-season `deferred` inputs are ignored and the UI disables them. The total principal comes from `DeferralSchedule.unattributedPrincipal`, because with stated interest the payments include interest and can't stand in for principal. | (a) [PRACTICE] (reproduces Ohtani, Scherzer §2.4.1); (b) attribution [TEXT], payment split [CONV] | E(6)(b)(i) |
+| F4 | Attribution modes: **(a) Sequential.** The contract maps seasons to payments in order: the first-earned money is paid first, and a payment is split across seasons where needed. **(c) Pro-rata.** The contract spreads each season's deferral across every payment ("each year's $10M is paid $1M a year"), so each payment is split across the deferral seasons in proportion to their principal. **(b) Not attributed.** Each season's deferral is the total ÷ the number of Guaranteed Years (F2), and each payment is split equally across the Guaranteed Years. In mode (b) the per-season `deferred` inputs are ignored and the UI disables them. The total principal comes from `DeferralSchedule.unattributedPrincipal`, because with stated interest the payments include interest and can't stand in for principal. | (a) [PRACTICE] (reproduces Ohtani, Scherzer, Snell §2.4.1); (c) [TEXT]: the contract's own attribution (reproduces Tucker, Bregman/CHC §2.4.1; added 2026-11-04, user sign-off); (b) attribution [TEXT], payment split [CONV] | E(6)(b)(i) |
 | F5 | Discounting uses whole years (payment calendar year − attributed season year), compounded annually at the ILIR. The CBA does not specify dates, day counts or compounding. This convention reproduces Ohtani and comes within $648/yr of Scherzer (§2.4.1). | [PRACTICE] | silent |
 | F6 | "Within 1.5 percentage points" is treated as inclusive (≤ 1.5). | [CONV] | silent |
 | F7 | **Representation.** Per-season `deferred` is principal at stated value. `payments` are the actual cash paid, interest included. Discounting the actual cash at the ILIR is the same as "increasing by the stated rate, then discounting". Sequential mapping (F4(a)) maps **principal**: each payment is split into principal and interest by amortizing the outstanding principal at the stated rate, and principal is assigned to seasons first-earned-first. Each payment's interest follows its principal. At 0% stated interest, Σ payments must equal Σ deferred. | [CONV] | E(6)(b)(ii) |
 
-#### 2.4.1 Evidence for F4(a) and F5 (reproduced as tests)
+#### 2.4.1 Evidence for F4 and F5 (reproduced as tests)
 
 - **Ohtani** (2024–33): current $2M + deferred $68M each season, paid $68M on July 1 each year 2034–43, no interest. The ILIR for the 2024 Contract Year is the October 2023 mid-term AFR, **4.43%** (PBGC historical table). Sequential attribution gives **$46,081,476.50**, against a reported **$46.08M** (Pivotal180, Yahoo/AP). Mode (b) gives **$46,769,026**. Ohtani's contract attributes each season to a payment, so mode (b) does not apply to it. **The current app uses mode (b), so it overstates Ohtani by about $687.5K/yr.**
 - **Scherzer** (2015–21, signed under the 2012–16 CBA): the October 2014 mid-term AFR is **1.85%** (Rev. Rul. 2014-26; PBGC). Sequential attribution gives **$28,690,024** against a reported **$28,689,376** (AP via SI/TSN). The **$648/yr (0.002%) residual is unexplained**. Mode (b) gives **$28,211,365**. The engine applies 2022–26 rules, and the preset says so.
+- **Snell** (LAD 2025–29; $13.2M a year deferred, paid $5.5M each July 1 2035–46; ILIR 3.70%, Rev. Rul. 2024-21). Sequential gives **$31,306,184.53**, against Spotrac's luxury tax of **$31,306,185** (read from the page). Mode (b), which is also pro-rata here because every season defers the same amount, gives **$31,357,257**. That matches FanGraphs and the AP's "about $31.4 million". So the outlets differ because they choose different attributions.
+- **Tucker** (LAD 2026–29; $10M of each 2027–29 salary, each paid $1M a year 2036–45, i.e. $3M a year; ILIR 3.87%, Rev. Rul. 2025-19). **Pro-rata** gives **$57,195,945**, which is **Cot's and the AP to the dollar** (present value $228,783,778). Sequential gives $57,181,099, and mode (b) $57,109,570 (ESPN's "$57.1M").
+- **Bregman, Cubs** (2026–30; deferrals 15/10/10/15/20, paid $8.75M a year 2034–41; ILIR 3.87%). **Pro-rata** gives **$30,893,902**, which is MLBTR's present value ÷ 5 and Spotrac, exactly. Sequential gives $30,845,960 and mode (b) $30,811,604.
+- **Bregman, Red Sox** (2025–27; context only, not a preset): the two reported figures split on two choices. Sequential with the $5M bonus paid in 2028 discounted (A7) gives **$31,732,959** (MLBTR, via the Boston Globe's Alex Speier and MassLive's Chris Cotillo: "$31.7MM"). The bonus at face value with pro-rata or mode (b) gives **$31,884,538** (Boston Globe: "roughly $31.9 million").
 
 ### 2.5 Bonuses
 
@@ -111,7 +115,7 @@ No rule enters the engine without a tag. Code comments cite the same section, an
 | V8 | **Opt-out taken after a Valley Charge**: the Valley Charge is **not refunded**. The O7 true-up excludes it, so total CBT can exceed cash paid (Bellinger opting out after 2027: $109.5M CBT vs $85M paid). The UI shows a callout quoting E(5)(d)(i). | [TEXT] (user decision 2026-11-04: literal reading) | E(5)(d)(i) ¶1 |
 | V9 | **O7 "excluding amounts attributed under (ii)" also excludes V7 credits.** In a partial opt-out (some option years exercised, later ones nullified), the V7 credits for the exercised years are left out of "amount attributed", just as the charges are. The alternative counts the credits as attributed, which raises the true-up (Bellinger W13: 21.5 instead of 13.3; total 135.3 instead of 127.1). | [INTERP] | E(5)(d)(i) ¶1 |
 | V10 | The Valley Charge applies only to Player Option Years that are **Guaranteed Years**. V3's "as if the Player Option Year was not a Guaranteed Year" presupposes a guaranteed year, and G(3)(e) avoids Valley Charges by reclassifying years as non-guaranteed. Combined with O6, applying it to non-guaranteed years can produce negative charges. | [INTERP] | E(5)(d)(ii), p.136; G(3)(e), p.143 |
-| V11 | In V3's "as if not Guaranteed" AAV, a Player Option Year buyout becomes a deemed Signing Bonus (A3 applied within the hypothetical). | [INTERP] | E(5)(d)(ii); (b)(i)(A) |
+| V11 | In V3's "as if not Guaranteed" AAV, a Player Option Year buyout becomes a deemed Signing Bonus (A3 applied within the hypothetical). **Only in V3:** the V2 80% Figure uses the contract's actual Signing Bonus. Corrected 2026-11-04: the first implementation also applied the hypothetical to V2, which gave Bichette a spurious $1.2M Valley Charge against his implied $42M. | [INTERP] | E(5)(d)(ii); (b)(i)(A) |
 
 ### 2.8 Explicitly out of scope (cited, so they are known gaps rather than oversights)
 
@@ -212,7 +216,7 @@ interface SeasonRow {
 interface OptOut { afterSeason: number; payment: number }          // Y3
 interface DeferralSchedule {
   payments: { year: number; amount: number }[];                    // actual cash incl. interest (F7)
-  attribution: 'sequential' | 'unattributed';                      // F4(a) / F4(b)
+  attribution: 'sequential' | 'prorata' | 'unattributed';         // F4(a) / F4(c) / F4(b)
   statedInterestPct: number;                                       // F3, default 0
   unattributedPrincipal?: number;                                  // F4(b) only: total principal at stated value
 }
@@ -238,6 +242,7 @@ interface Charge {
 }
 interface Result {
   classification: SeasonClass[];
+  playedSeasons: number[];                 // seasons actually played under the scenario (END)
   aavAtSigning: number;
   charges: Charge[];                       // every component, each with its kind and rule ids
   perSeason: { season: number; cbt: number; cash: number }[];
@@ -271,10 +276,17 @@ interface Result {
 - **Scenario panel:** one toggle per option row, defaulting club/mutual/vesting to **declined** and player/dual to **exercised**. One opt-out selector, defaulting to **not taken**. Earned-bonus inputs per season. The defaults mirror the CBA's guaranteed classification and are a UI choice, not a rule.
 - **Results:** "AAV at signing" (A1) is always shown and does not depend on the scenario. Below it, the totals for the selected scenario: total CBT vs total cash, with the difference explained by line items.
 - **Year table:** each season's CBT figure expands into its Charge line items, e.g. "AAV $32.5M · A1 [TEXT]" or "Valley Charge +$12.25M · V4 [TEXT] · V5 [PRACTICE] · V6 [INTERP]". A line item lists **every** rule id that determined its amount, each with its own tag. Seasons outside the playing term appear when charges land there (O7).
-- **Flags:** a callout lists every [PRACTICE]/[INTERP]/[CONV] rule the current result depends on, with a one-line explanation, its cite and the named alternative. V8 shows the quoted E(5)(d)(i) text.
-- **Presets:** each shows "Sources" (links), and where an official figure exists, "Reported CBT: $X · Engine: $Y · Δ". The reconciliation is shown on purpose.
-- **Chart:** CBT charge vs cash received per calendar year, with the existing contract-end reference line.
-- Responsive and accessible per the existing Tailwind patterns. No new runtime dependencies.
+- **Flags:** a callout lists every [PRACTICE]/[INTERP]/[CONV] rule the current result depends on, with a one-line explanation, its cite and the named alternative. V8 shows the quoted E(5)(d)(i) text. END is flagged only when ending the contract voids a season that would otherwise count, not when the contract simply ends at a declined final option.
+- **Presets:** a select grouped by rule family (deferred money, signing bonus, opt-outs, club options, basic). The loaded preset shows its note, "Sources" (links), and where a figure was reported, "Reported CBT: $X · Engine: $Y · Δ" (Δ rounded to whole dollars). The reconciliation is shown on purpose. Editing any term turns the preset into a custom contract, and the reconciliation disappears.
+- **Chart:** CBT charge vs cash received per calendar year, with a "last season played" reference line from `Result.playedSeasons`.
+- Responsive and accessible per the existing Tailwind patterns:
+  - Year-table rows expand through a real `<button aria-expanded>`, and rule cites are visible text.
+  - Tooltips open on focus as well as hover.
+  - Errors name their season and set `aria-invalid`, not just a colour.
+  - First Season and Length commit on blur or Enter, and only when the value changes. Length is limited to 1–30, and anything else reverts.
+  - Info tooltips open on the first tap or click and sit beside, not inside, their `<label>`.
+  - The scenario panel stays mounted when results are hidden.
+  - No new runtime dependencies.
 
 ---
 
@@ -285,9 +297,18 @@ interface Result {
 | **Ohtani** (LAD, 2024–33) | Current $2M + deferred $68M per season; $68M paid each July 1 2034–43; no interest; sequential; ILIR 4.43% (Oct 2023) | AP/Yahoo; Pivotal180; PBGC AFR table | CBT AAV $46.08M (published to $10K) → assert within ±$5,000 of $46,080,000 |
 | **Scherzer** (WSH, 2015–21) | Current salary ($M) 10, 15, 15, 15, 0, 0, 0; deferred 0, 0, 0, 0, 35, 35, 35; $50M signing bonus paid 5 (2015), 15 (2019), 15 (2020), 15 (2021); deferral paid $15M each July 1 2022–28; no interest; sequential; ILIR 1.85% (Oct 2014). Labeled "signed under the 2012–16 CBA; 2022–26 rules applied." | AP via SI/TSN/ESPN; Rev. Rul. 2014-26; PBGC | $28,689,376 → assert within ±$1,000 (documented residual $648) |
 | **Bellinger** (NYY, 2026–30) | Current salary ($M) 32.5, 32.5, 25.8, 25.8, 25.9; $20M signing bonus paid $10M on 4/1/26 + $10M on 8/1/26; **opt-outs after 2027 and after 2028**, $0 payment | MLBTR 2026-01 ("after the second or third season", "$77.5MM remaining at the first decision point"); Forbes 2026-02-06; NY Post (Sherman) | 2026 and 2027 CBT $44,750,000 → assert exact |
+| **Snell** (LAD, 2025–29) | $12.8M current + $13.2M deferred per season; $52M bonus (2025); $5.5M each July 1 2035–46; sequential; ILIR 3.70%; 2030 conditional club option $10M (no buyout; trigger disputed) | AP via ESPN; MLBTR; Spotrac; Rev. Rul. 2024-21 | Spotrac $31,306,185 → ±$1 |
+| **Bregman** (CHC, 2026–30) | $35M per season, deferred 15/10/10/15/20; $8.75M a year 2034–41; pro-rata; ILIR 3.87% | AP via Capitol City Now; MLBTR; Cubs Insider | $30,893,902 → ±$1 |
+| **Guerrero Jr.** (TOR, 2026–39) | Salaries 17…6 ($M); $325M bonus in 15 installments 2025–39; no deferrals | AP via Fox Sports; MLBTR; Canadian Press | MLBTR "$35.714MM" → ±$1,000 |
+| **Soto** (NYM, 2025–39) | 46.875/46.875/42.5/46.875/46.875 then $46M × 10; $75M bonus; opt-out after 2029 (club negate right not modeled) | AP via theScore; Cot's; MLBTR | Cot's $51M → exact |
+| **Tucker** (LAD, 2026–29) | Current 1/45/50/50 + deferred 0/10/10/10; bonus $54M (2026) + $10M (2027); opt-outs after 2027 and 2028; $3M a year 2036–45; pro-rata; ILIR 3.87% | AP via Fox Sports; Cot's; Spotrac; Rev. Rul. 2025-19 | Cot's/AP $57,195,945 → ±$1 |
+| **Alonso** (NYM, 2025–26) | $20M, $24M; $10M bonus; opt-out after 2025 (taken) | MLBTR; MLB.com | MLBTR "$27MM … for luxury tax purposes" → exact |
+| **Bichette** (NYM, 2026–28) | $2M, $42M, $42M; $40M bonus; opt-outs after 2026 and 2027, each paying $5M | AP via CBS; MLBTR; MLB.com | $42M, **implied** by MLBTR → exact |
+| **Jansen** (DET, 2026) | $9M; 2027 club option $12M, $2M buyout (declined) | AP via Fox17; MLBTR | MLBTR "$11MM" → exact |
+| **Kim** (LAD, 2025–27) | $2.5M, $3.75M, $3.75M; $1M bonus; 2028–29 joint club options $5M each, one $1.5M buyout | Dodgers press release; True Blue LA (AP) | $4,166,667 → ±$1 |
 | **Standard** | 5 × $20M guaranteed, nothing else | — | $20M (identity) |
 
-A club-option preset is added **only** if a contract with published salary, buyout **and** reported CBT figure turns up during implementation. Otherwise club options are covered by the worked examples (§8) alone. No illustrative preset is presented as a real contract.
+Every preset's terms come from sources read directly, or from Spotrac pages the user saved. Conflicts and unconfirmed items are stated in each preset's note, as is anything the engine doesn't model: Soto's club negate right, Kim's joint exercise, and the disputed deferral of Bichette's buyout. **Soto and Alonso sit exactly at the 80% Valley boundary**, so neither gets a charge, and named tests pin this. No illustrative preset is presented as a real contract.
 
 ---
 
@@ -351,4 +372,6 @@ Every rule id in §2–§3 gets at least one test named with that id (e.g., `V3 
 | 2026-11-04 | Signed off as written: V7 (staying after a Valley Charge → AAV − averaged own shortfalls; Bellinger $24.33M), V9 (O7 exclusion covers V7 credits; W13 = $127.1M), D5 (Base Salary = current pay only, everywhere), A5 (higher buyout when club + player buyouts mix) | user |
 | 2026-11-04 | Accepted as written: A7, O2 non-stacking (i)–(ii), O4(b), O5, O8, V6 (incl. nullified share), V10, V11, X4. **Spec approved.** | user |
 | 2026-11-04 | Ships as a major release, 1.0.0: the `!` goes on PR (3) `feat!:`, PR (2) is `refactor:`, and drafts are not published mid-series (§9) | user |
+| 2026-11-04 | Plan B decisions: keep the current Tailwind look; rename to "MLB Contract Calculator" (title, header, README, CI smoke test); add F4(c) pro-rata attribution; ship the nine presets in §7. | user |
+| 2026-11-04 | Plan B engine changes from prototype verification: `Result.playedSeasons` (END-aware) for the chart and table; V11 scope fix (V3 floor only); END flag only when it voids a season that would count; `@types/react` 19.3.0 + whole-project type-check in CI. | Claude (verified, tests) |
 | 2026-11-04 | **Post-approval changes from the plan review, signed off by user 2026-11-04:** §5.3 validation. (a) F7 payment/principal mismatch at 0% interest is a blocking error, in both modes. (b) END ordering: no guaranteed row after an option row; found by a generated counterexample that voided a Guaranteed Year. (c) The season after an opt-out must be a guaranteed row. (d) ILIR is required only with deferred compensation. (e) At least one Guaranteed season is required, and A2's no-Guaranteed-Years fallback is out of scope (§2.8). | Claude (plan review) |

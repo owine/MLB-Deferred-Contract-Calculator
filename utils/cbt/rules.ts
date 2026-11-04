@@ -52,6 +52,11 @@ export const RULES = {
   F2: { cite: 'E(6)(b)(i), p.136', tag: 'TEXT', summary: 'Deferred comp counts in the season the contract attributes it to' },
   F3: { cite: 'E(6)(b)(ii), p.136–137', tag: 'TEXT', summary: 'Stated interest within 1.5 pp of ILIR → stated value; else discounted at ILIR' },
   F4a: { cite: 'E(6)(b)(i), p.136', tag: 'PRACTICE', summary: 'Sequential attribution: first-earned principal paid first' },
+  F4c: {
+    cite: 'E(6)(b)(i), p.136',
+    tag: 'TEXT',
+    summary: 'Pro-rata: the contract spreads each season’s deferral across every payment',
+  },
   F4b: { cite: 'E(6)(b)(i), p.136', tag: 'TEXT', summary: 'Unattributed: equally to each Guaranteed Year (payment split is a convention)' },
   F5: { cite: 'silent', tag: 'PRACTICE', summary: 'Whole-year, annually compounded discounting' },
   F6: { cite: 'silent', tag: 'CONV', summary: '"Within 1.5 percentage points" is inclusive' },

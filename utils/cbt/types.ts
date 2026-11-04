@@ -35,7 +35,7 @@ export interface DeferralSchedule {
   /** Actual cash paid, interest included (F7). Every year must be after the maximum term (F1). */
   payments: Payment[];
   /** F4(a) sequential (contract attributes) or F4(b) unattributed (CBA default). */
-  attribution: 'sequential' | 'unattributed';
+  attribution: 'sequential' | 'prorata' | 'unattributed';
   /** F3. Default 0. */
   statedInterestPct: number;
   /** F4(b) only: total principal at stated value. */
@@ -96,6 +96,8 @@ export interface Flag {
 
 export interface Result {
   classification: SeasonClass[];
+  /** Seasons actually played under the scenario: later seasons are void after a declined option or taken opt-out (END). */
+  playedSeasons: number[];
   aavAtSigning: number;
   charges: Charge[];
   perSeason: { season: number; cbt: number; cash: number }[];

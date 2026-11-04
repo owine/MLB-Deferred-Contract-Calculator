@@ -140,7 +140,8 @@ export function computeOutcome(
 
   // O2: a deemed buyout never received (contract ended first) is deducted in its option year,
   // unless an O7 true-up already netted it (O2NS).
-  const notes: RuleId[] = end ? ['END'] : [];
+  // END moved a number only if it voided a season that would otherwise count (not just declined trailing options).
+  const notes: RuleId[] = voided.some((c) => !(isOptionRow(c) && decisionFor(scenario, c) === 'declined')) ? ['END'] : [];
   for (const c of voided) {
     const inc = included(c.season);
     if (inc <= 0 || received?.season === c.season) continue;

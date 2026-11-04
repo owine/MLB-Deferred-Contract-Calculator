@@ -8,30 +8,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Build:** `pnpm run build` (Vite production build to `dist/`)
 - **Preview build:** `pnpm run preview`
 - **Tests:** `pnpm test` (Vitest, `vitest run`; also runs in CI)
+- **Type-check:** `pnpm run typecheck` (whole project) and `pnpm run typecheck:engine` (strict, engine + presets); both run in CI
 - **Docker:** `docker-compose up -d` (builds and serves on port 3000)
 
 There is no linting or formatting configured.
 
 ## Architecture
 
-Single-page React + TypeScript app built with Vite. Calculates MLB Competitive Balance Tax (CBT/Luxury Tax) implications of deferred money in player contracts, based on Article XXIII of the CBA.
+Single-page React + TypeScript app built with Vite. Calculates the MLB Competitive Balance Tax (CBT/luxury tax) charge of any contract — salaries, signing bonuses, options, opt-outs, deferred money — under Article XXIII of the CBA.
 
 ### Key Files
 
-- `App.tsx` — Entire UI in one file: form inputs, validation, results cards, Recharts bar chart, year-by-year table, and static Funding & Escrow Rules section. Contains preset scenarios (Ohtani, Scherzer, Standard).
-- `utils/calculations.ts` — All financial logic: present value calculation (`PV = FV / (1+r)^n`), contract modeling, and number formatting. Exports `calculateContract()` which returns `CalculationResult` with AAV figures, yearly breakdown, and escrow requirements.
-- `utils/cbt/` — CBT contract engine (pure functions, not yet used by the UI). Implements every rule in `docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md`. `rules.ts` maps each rule id to its CBA citation and evidence tag. `calculate(input, scenario)` in `index.ts` is the entry point. Tests are in `utils/cbt/__tests__/` (worked examples W1–W18, presets, invariants). Strict type-check: `pnpm run typecheck:engine`.
+- `App.tsx` — State and layout only: holds the `ContractInput` and `Scenario`, validates, calls the engine, and lays out the components.
+- `components/` — `ContractTerms`, `ScheduleEditor`, `DeferralEditor`, `PaymentsEditor`, `IssuesList` (inputs); `ScenarioPanel`, `ResultCards`, `FlagsCallout`, `CbtChart`, `YearTable`, `FundingSchedule`, `FundingRules` (results); `PresetBar`, `fields.tsx` (shared inputs), `InfoTooltip`.
+- `utils/form.ts` — Pure helpers for editing a contract and keeping the scenario valid (`syncScenario`); tested in `utils/__tests__/form.test.ts`.
+- `utils/format.ts` — Money formatting and parsing.
+- `utils/cbt/` — CBT contract engine (pure functions). Implements every rule in `docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md`. `rules.ts` maps each rule id to its CBA citation and evidence tag. `calculate(input, scenario)` in `index.ts` is the entry point. Tests are in `utils/cbt/__tests__/` (worked examples W1–W18, presets, invariants). Strict type-check: `pnpm run typecheck:engine`.
 - `data/presets.ts` — Real-contract presets with sources and reported CBT figures.
-- `components/InfoTooltip.tsx` — Hover tooltip component used for field explanations.
 - `index.tsx` — React entry point, renders `<App />` into `#root`.
 
 ### Domain Concepts
 
-- **Nominal AAV**: Total contract value / years (actual dollars).
-- **CBT AAV (Tax Hit)**: Total present value (cash + discounted deferrals) / years. This is what counts against the luxury tax.
-- **Interest Rate**: Federal Mid-Term Rate used to discount future deferred payments.
-- **Escrow PV**: Separate calculation using a fixed 5% discount rate (per Article XVI) for funding requirements.
-- The calculation iterates over each earning year × each payout year to sum discounted installments.
+- **CBT AAV**: (Base Salary + signing bonus + deferred-money cost over the Guaranteed Years) ÷ number of Guaranteed Years (E(2)). Options, opt-outs, the Valley Charge and earned bonuses then adjust individual seasons.
+- **Deferred money** counts in the season the contract attributes it to — sequential, pro-rata, or (CBA default) equally over the Guaranteed Years — discounted at the Imputed Loan Interest Rate (October mid-term AFR before the first Contract Year).
+- **Article XVI funding**: separate 5% present value the club must hold from the second July 1 after each season.
+- The spec's rule ids (A1, V4, F4c, …) appear in `utils/cbt/rules.ts`, in charge line items, and in the UI.
 
 ### Styling
 
