@@ -1,6 +1,7 @@
 // Flags (spec §5.1, §6): every [PRACTICE]/[INTERP]/[CONV] rule that moved a number, plus the V8 callout.
 import { sortedSeasons } from './classify';
 import type { DeferralResult } from './deferral';
+import { MONEY_EPS } from './money';
 import type { OutcomeResult } from './outcome';
 import { RULES, type RuleId } from './rules';
 import type { ContractInput, Flag, Result, SeasonClass } from './types';
@@ -20,7 +21,7 @@ export function collectFlags(
     if (!flags.some((f) => f.rule === r)) flags.push({ rule: r, message: RULES[r].summary });
   };
   for (const ch of outcome.charges) {
-    if (Math.abs(ch.amount) < 1e-9) continue;
+    if (Math.abs(ch.amount) <= MONEY_EPS) continue; // a zero charge moved nothing
     for (const r of ch.rules) if (RULES[r].tag !== 'TEXT' || r === 'V8') flag(r);
   }
   outcome.notes.forEach(flag); // END, O2NS: changed the result without a charge of their own

@@ -2,6 +2,7 @@
 import { selectDeemedBuyout } from './aav';
 import { sortedSeasons } from './classify';
 import type { DeferralResult } from './deferral';
+import { MONEY_EPS } from './money';
 import type { ContractInput, SeasonClass } from './types';
 
 export interface ValleyResult {
@@ -49,10 +50,12 @@ export function computeValley(
       ...priorG.map((c) => rows.get(c.season)!.currentSalary + signingBonus / priorG.length + cost(c.season)),
     );
     const figure = Math.max(0.8 * smallest, 0.75 * hypAav); // V3 floor
-    if (!(value(candidate) < figure)) continue; // V6: not "such"; try the next option year
+    // A year is "such" only if its shortfall exceeds MONEY_EPS.
+    const short = (c: SeasonClass) => figure - value(c) > MONEY_EPS;
+    if (!short(candidate)) continue; // V6: not "such"; try the next option year
 
     const shortfalls = new Map<number, number>();
-    for (const c of po.slice(k)) if (value(c) < figure) shortfalls.set(c.season, figure - value(c));
+    for (const c of po.slice(k)) if (short(c)) shortfalls.set(c.season, figure - value(c));
     const total = [...shortfalls.values()].reduce((s, v) => s + v, 0);
     const allocation = new Map(priorG.map((c) => [c.season, total / priorG.length] as [number, number]));
     return { firstSuch: candidate.season, figure, shortfalls, allocation, usedV11 };

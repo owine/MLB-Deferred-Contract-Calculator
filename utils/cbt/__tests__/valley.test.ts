@@ -47,4 +47,11 @@ describe('Valley Charge (V1–V6, V10, V11)', () => {
     const v = valleyOf(build([...guaranteed(3, 20), { currentSalary: 25, kind: 'club', buyout: 3 }], { optOuts: [{ afterSeason: Y1 + 1, payment: 0 }] }));
     expect(v.firstSuch).toBeNull();
   });
+
+  it('a shortfall within MONEY_EPS (half a cent) is not a Valley Charge', () => {
+    expect(valleyOf(build([...guaranteed(3, 20), { currentSalary: 15.999, kind: 'player' }])).firstSuch).toBeNull();
+    const v = valleyOf(build([...guaranteed(3, 20), { currentSalary: 15.99, kind: 'player' }]));
+    expect(v.firstSuch).toBe(Y1 + 3);
+    expect(v.shortfalls.get(Y1 + 3)).toBeCloseTo(0.01, 9);
+  });
 });
