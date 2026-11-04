@@ -6,7 +6,9 @@ export interface Source {
   confirms: string;
 }
 
-export type PresetGroup = 'Deferred money' | 'Signing bonus' | 'Opt-outs' | 'Club options' | 'Basic';
+/** Picker order; the type derives from this list, so a new group can't be left out of the picker. */
+export const PRESET_GROUPS = ['Deferred money', 'Signing bonus', 'Opt-outs', 'Club options', 'Basic'] as const;
+export type PresetGroup = (typeof PRESET_GROUPS)[number];
 
 export interface Preset {
   id: string;
@@ -139,7 +141,7 @@ export const PRESETS: Preset[] = [
     sources: [
       { url: 'https://capitolcitynow.com/news/248842-chicago-cubs-finalize-contract-with-all-star-third-baseman-alex-bregman/', confirms: 'AP: $35M a year, deferrals 15/10/10/15/20, paid in 8 installments 2034–41' },
       { url: 'https://www.mlbtraderumors.com/2026/03/offseason-in-review-chicago-cubs-18.html', confirms: 'Net present value $154,469,510 (÷ 5 = $30,893,902)' },
-      { url: 'http://cubsinsider.com/2026/01/15/alex-bregmans-deferrals-lower-aav-to-30-9-million-maybe-less/', confirms: 'Correct per-season installments; RosterResource “nearly $30.9 million”' },
+      { url: 'https://cubsinsider.com/2026/01/15/alex-bregmans-deferrals-lower-aav-to-30-9-million-maybe-less/', confirms: 'Correct per-season installments; RosterResource “nearly $30.9 million”' },
     ],
     reported: { seasons: range(2026, 5), cbt: 30_893_902, tolerance: 1, note: 'MLBTR present value ÷ 5 (also Spotrac)' },
   },

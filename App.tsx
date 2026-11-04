@@ -36,6 +36,7 @@ const App: React.FC = () => {
     setInput(next);
     setScenario(defaultScenario(next));
     setPresetId(p.id);
+    setShowDeferral(false); // the card still shows for presets with deferred money (hasDeferral)
   };
 
   const issues = useMemo(() => [...validate(input), ...validateScenario(input, scenario)], [input, scenario]);

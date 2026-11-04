@@ -14,7 +14,6 @@ export const ScenarioPanel: React.FC<{
   const rows = sortRows(input.seasons);
   const optionSeasons = Object.keys(defaultScenario(input).options).map(Number).sort((a, b) => a - b);
   const played = new Set(playedSeasons ?? rows.map((r) => r.season));
-  if (optionSeasons.length === 0 && input.optOuts.length === 0 && rows.length === 0) return null;
   return (
     <div className={`${cardClass} p-6 space-y-4`}>
       <h3 className="text-lg font-semibold text-slate-800">What Happens?</h3>

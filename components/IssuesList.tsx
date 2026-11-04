@@ -13,7 +13,7 @@ export const IssuesList: React.FC<{ issues: ValidationIssue[] }> = ({ issues }) 
   const errors = issues.filter((i) => i.severity === 'error');
   const warnings = issues.filter((i) => i.severity === 'warning');
   return (
-    <div role="alert" className="space-y-2">
+    <div role="status" aria-live="polite" className="space-y-2">
       {errors.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
           <p className="font-semibold flex items-center gap-1 mb-1">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { ContractInput } from '../utils/cbt';
 import { fillEvenly, setLength, setStartSeason, sortRows } from '../utils/form';
 import { CommitNumberInput, Label, MoneyInput, NumberInput } from './fields';
@@ -12,12 +12,18 @@ const BONUS_TIP =
 export const ContractTerms: React.FC<{ input: ContractInput; onChange: (next: ContractInput) => void }> = ({ input, onChange }) => {
   const rows = sortRows(input.seasons);
   const [total, setTotal] = useState(NaN);
+  const hasPayments = input.signingBonus.payments.length > 0;
+  // The user controls open/closed; it opens when a schedule appears (e.g. a preset loads) but never closes itself.
+  const [scheduleOpen, setScheduleOpen] = useState(hasPayments);
+  useEffect(() => {
+    if (hasPayments) setScheduleOpen(true);
+  }, [hasPayments]);
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label text="First Season" htmlFor="start-season" />
-          <CommitNumberInput id="start-season" value={rows[0]?.season ?? 2026} onCommit={(y) => onChange(setStartSeason(input, y))} />
+          <CommitNumberInput id="start-season" min={1900} max={2100} value={rows[0]?.season ?? 2026} onCommit={(y) => onChange(setStartSeason(input, y))} />
         </div>
         <div>
           <Label text="Length (Seasons)" htmlFor="length" />
@@ -57,7 +63,7 @@ export const ContractTerms: React.FC<{ input: ContractInput; onChange: (next: Co
         </div>
       </div>
       {(input.signingBonus.amount > 0 || input.signingBonus.payments.length > 0) && (
-        <details className="text-sm" open={input.signingBonus.payments.length > 0}>
+        <details className="text-sm" open={scheduleOpen} onToggle={(e) => setScheduleOpen(e.currentTarget.open)}>
           <summary className="cursor-pointer text-slate-600">Signing bonus payment schedule ({input.signingBonus.payments.length || 'paid in first season'})</summary>
           <div className="mt-2">
             <PaymentsEditor

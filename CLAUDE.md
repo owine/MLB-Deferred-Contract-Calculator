@@ -25,7 +25,6 @@ Single-page React + TypeScript app built with Vite. Calculates the MLB Competiti
 - `utils/format.ts` — Money formatting and parsing.
 - `utils/cbt/` — CBT contract engine (pure functions). Implements every rule in `docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md`. `rules.ts` maps each rule id to its CBA citation and evidence tag. `calculate(input, scenario)` in `index.ts` is the entry point. Tests are in `utils/cbt/__tests__/` (worked examples W1–W18, presets, invariants). Strict type-check: `pnpm run typecheck:engine`.
 - `data/presets.ts` — Real-contract presets with sources and reported CBT figures.
-- `components/InfoTooltip.tsx` — Hover tooltip component used for field explanations.
 - `index.tsx` — React entry point, renders `<App />` into `#root`.
 
 ### Domain Concepts

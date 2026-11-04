@@ -23,6 +23,11 @@ describe('form helpers', () => {
     expect(r.seasons.map((s) => s.currentSalary)).toEqual([30e6, 30e6, 30e6, 30e6, 30e6]);
   });
 
+  it('fillEvenly rounds to cents and puts the remainder on the last season', () => {
+    const r = fillEvenly(setLength(standard(), 3), 100_000_000);
+    expect(r.seasons.map((s) => s.currentSalary)).toEqual([33_333_333.33, 33_333_333.33, 33_333_333.34]);
+  });
+
   it('setLength adds guaranteed seasons copying the last salary, and trims opt-outs when shrinking', () => {
     const grown = setLength(standard(), 7);
     expect(grown.seasons.map((s) => s.season)).toEqual([2027, 2028, 2029, 2030, 2031, 2032, 2033]);

@@ -71,8 +71,8 @@ export const YearTable: React.FC<{ result: Result }> = ({ result }) => {
                     <td className="px-6 py-3 text-right font-medium bg-blue-50/30 text-blue-600 font-mono">{charges.length ? formatMoney(row.cbt) : '—'}</td>
                     <td className="px-6 py-3 text-right text-slate-800 font-mono">{row.cash ? formatMoney(row.cash) : '—'}</td>
                   </tr>
-                  {isOpen && (
-                    <tr id={detailsId} className="bg-slate-50/60 text-xs">
+                  {charges.length > 0 && (
+                    <tr id={detailsId} hidden={!isOpen} className="bg-slate-50/60 text-xs">
                       <td colSpan={4} className="px-6 py-2">
                         <ul className="space-y-2">
                           {charges.map((c, i) => (

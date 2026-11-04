@@ -4,10 +4,11 @@ import { defaultScenario, type ContractInput, type Payment, type Scenario, type 
 
 export const sortRows = (rows: SeasonRow[]) => [...rows].sort((a, b) => a.season - b.season);
 
-/** Set every season's current salary to an equal share of `total` (deferred amounts are left alone). */
+/** Set every season's current salary to an equal share of `total`, in cents, the last season taking the remainder. */
 export function fillEvenly(input: ContractInput, total: number): ContractInput {
-  const n = input.seasons.length;
-  return { ...input, seasons: input.seasons.map((r) => ({ ...r, currentSalary: n > 0 ? total / n : 0 })) };
+  const shares = equalPayments(0, input.seasons.length, total).map((p) => p.amount);
+  const order = sortRows(input.seasons).map((r) => r.season);
+  return { ...input, seasons: input.seasons.map((r) => ({ ...r, currentSalary: shares[order.indexOf(r.season)] ?? 0 })) };
 }
 
 /** Grow or shrink the contract to `length` seasons. New seasons copy the last season's pay as guaranteed years. */

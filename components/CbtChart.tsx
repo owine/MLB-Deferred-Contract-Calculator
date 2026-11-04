@@ -18,7 +18,7 @@ export const CbtChart: React.FC<{ result: Result }> = ({ result }) => {
             <YAxis tickFormatter={(v: number) => `$${Math.round(v / 1_000_000)}M`} />
             <Tooltip formatter={(v) => formatMoney(Number(v))} labelStyle={{ color: '#1e293b', fontWeight: 'bold' }} />
             <Legend />
-            {lastPlayed !== undefined && <ReferenceLine x={lastPlayed} stroke="red" strokeDasharray="3 3" label={{ value: 'last season played', fontSize: 10, fill: '#ef4444', position: 'top' }} />}
+            {lastPlayed !== undefined && <ReferenceLine x={lastPlayed} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'last season played', fontSize: 10, fill: '#ef4444', position: 'top' }} />}
             <Bar dataKey="cash" name="Cash Received" fill="#94a3b8" radius={[4, 4, 0, 0]} />
             <Bar dataKey="cbt" name="CBT Charge" fill="#3b82f6" radius={[4, 4, 0, 0]} />
           </BarChart>

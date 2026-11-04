@@ -1,6 +1,6 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
-import type { Preset, PresetGroup } from '../data/presets';
+import { PRESET_GROUPS, type Preset } from '../data/presets';
 import { calculate, defaultScenario } from '../utils/cbt';
 import { formatMoney } from '../utils/format';
 
@@ -13,8 +13,6 @@ export function reconcile(preset: Preset): { engine: number; reported: number; d
   const delta = Math.round(worst - preset.reported.cbt);
   return { engine: worst, reported: preset.reported.cbt, delta: delta === 0 ? 0 : delta }; // no "-$0"
 }
-
-const GROUPS: PresetGroup[] = ['Deferred money', 'Signing bonus', 'Opt-outs', 'Club options', 'Basic'];
 
 export const PresetBar: React.FC<{ presets: Preset[]; activeId: string | null; onLoad: (p: Preset) => void }> = ({ presets, activeId, onLoad }) => {
   const active = presets.find((p) => p.id === activeId) ?? null;
@@ -32,7 +30,7 @@ export const PresetBar: React.FC<{ presets: Preset[]; activeId: string | null; o
         className="w-full border border-blue-200 bg-blue-50 text-blue-700 rounded-lg px-2 py-2 text-sm"
       >
         <option value="" disabled>{activeId ? '' : 'Custom contract — pick one to load…'}</option>
-        {GROUPS.map((g) => (
+        {PRESET_GROUPS.map((g) => (
           <optgroup key={g} label={g}>
             {presets.filter((p) => p.group === g).map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>

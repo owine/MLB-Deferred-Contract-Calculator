@@ -13,10 +13,11 @@ export const PaymentsEditor: React.FC<{
   generateTotal?: number;
   label: string;
 }> = ({ payments, onChange, defaultYear, generateTotal, label }) => {
-  const [count, setCount] = useState(5);
+  const [countText, setCountText] = useState('5');
+  const count = Number(countText);
   const [firstYear, setFirstYear] = useState(defaultYear);
   useEffect(() => setFirstYear(defaultYear), [defaultYear]); // follow the contract when its seasons move
-  const canGenerate = Number.isInteger(count) && count >= 1 && Number.isInteger(firstYear) && firstYear >= 1900 && generateTotal !== undefined && generateTotal > 0;
+  const canGenerate = countText.trim() !== '' && Number.isInteger(count) && count >= 1 && Number.isInteger(firstYear) && firstYear >= 1900 && generateTotal !== undefined && generateTotal > 0;
   const set = (i: number, patch: Partial<Payment>) => onChange(payments.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   return (
     <div className="space-y-2">
@@ -45,7 +46,7 @@ export const PaymentsEditor: React.FC<{
         {generateTotal !== undefined && (
           <span className="flex items-center gap-1 text-slate-500">
             or
-            <input aria-label="Number of equal payments" type="number" min="1" value={count} onChange={(e) => setCount(Number(e.target.value))} className="w-12 border border-slate-300 rounded px-1 py-0.5" />
+            <input aria-label="Number of equal payments" type="number" min="1" value={countText} onChange={(e) => setCountText(e.target.value)} className="w-12 border border-slate-300 rounded px-1 py-0.5" />
             equal payments from
             <input aria-label="First payment year" type="number" value={firstYear} onChange={(e) => setFirstYear(Number(e.target.value))} className="w-16 border border-slate-300 rounded px-1 py-0.5" />
             <button
