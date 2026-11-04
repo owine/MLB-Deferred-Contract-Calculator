@@ -40,4 +40,17 @@ describe('presets', () => {
     const input = { ...p.input, deferral: { ...p.input.deferral, attribution: 'unattributed' as const, unattributedPrincipal: 680_000_000 } };
     expect(Math.round(calculate(input, defaultScenario(input)).aavAtSigning)).toBe(46_769_026);
   });
+
+  it.each([['soto'], ['alonso']])('V4 %s sits exactly at the 80% boundary: no Valley Charge', (id) => {
+    const p = preset(id);
+    const r = calculate(p.input, defaultScenario(p.input));
+    expect(r.charges.filter((c) => c.kind === 'valley')).toEqual([]);
+  });
+
+  it('F4c Tucker: pro-rata attribution reproduces Cot’s $57,195,945 with no Valley Charge', () => {
+    const p = preset('tucker');
+    const r = calculate(p.input, defaultScenario(p.input));
+    expect(Math.round(r.aavAtSigning)).toBe(57_195_945);
+    expect(r.charges.filter((c) => c.kind === 'valley')).toEqual([]);
+  });
 });
