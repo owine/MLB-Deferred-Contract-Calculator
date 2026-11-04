@@ -1,5 +1,5 @@
 {
-  "name": "mlb-deferred-contract-calculator",
+  "name": "mlb-contract-calculator",
   "private": true,
   "version": "0.4.7",
   "type": "module",

@@ -101,12 +101,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # This repository's name contains capitals, but GHCR only accepts
-      # lowercase paths. metadata-action lowercases `images:` for us, which is
-      # why the old single-job build never needed this -- but push-by-digest's
-      # `name=` and `imagetools create` take the string verbatim. Without this
-      # step both would be handed owine/MLB-Deferred-Contract-Calculator and
-      # rejected.
+      # GHCR only accepts lowercase paths. metadata-action lowercases `images:`
+      # for us, but push-by-digest's `name=` and `imagetools create` take the
+      # string verbatim. The repository was renamed to the all-lowercase
+      # owine/mlb-contract-calculator (it used to be MLB-Deferred-Contract-
+      # Calculator, which GHCR rejected), so this is now a no-op safeguard
+      # against a future capitalized name.
       - name: Compute image name (lowercase)
         id: image
         env:
