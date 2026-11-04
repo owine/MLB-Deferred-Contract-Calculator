@@ -317,10 +317,11 @@ Every rule id in §2–§3 gets at least one test named with that id (e.g., `V3 
 - One branch per PR, squash-merged. The PR title drives release-drafter.
 - Suggested PR split for the implementation plan:
   1. `ci:` Vitest + test step.
-  2. `feat:` engine + tests (UI still on the old path).
-  3. `feat:` UI split + new inputs and scenarios.
+  2. `refactor:` engine + tests (UI still on the old path; hidden from release notes).
+  3. **`feat!:`** UI split + new inputs and scenarios. This PR carries the major-version marker.
   4. `fix:` copy corrections per §4 + Scherzer preset rebuild.
-- The Ohtani preset value changes ($46.77M → $46.08M) with (2)/(3), and the release notes must call this out.
+- **This ships as a major release (1.0.0).** The repo is on `0.x`, where a `!` in a PR title drafts `1.0.0`, and release-drafter takes the largest bump among merged PRs. The `!` goes on (3) because that's where users see the breaking change: new inputs, and changed results (Ohtani $46.77M → $46.08M, which the release notes must call out).
+- **Don't publish the draft release** between (1) and (4). Each merge refreshes the same draft. Publish once, after (4), as 1.0.0.
 - No changes to `package.json` `version`, CHANGELOG, Dockerfile, or Renovate config.
 
 ## 10. Decisions log

@@ -205,7 +205,7 @@ Expected: the PR's `test` job is green. Merge after checks pass, then continue t
 
 ## Phase 2 — PR 2: `refactor: add CBT contract engine (not yet wired to the UI)`
 
-> **Title note:** spec §9 suggested `feat:` for this PR. Nothing user-visible changes until Plan B wires the engine into `App.tsx`. A `feat:` title would put a release-note entry and a minor bump on a release whose users see no difference. Use `refactor:`, which release-drafter hides, and give the user-facing `feat:` to Plan B's UI PR. If the user prefers `feat:` here, change only the PR title.
+> **Release note:** this work ships as **1.0.0** (user decision, spec §9). The `!` that drafts 1.0.0 belongs on Plan B's UI PR (`feat!:`), where users see the breaking change, **not** here. This PR is `refactor:`, which release-drafter hides, because nothing user-visible changes until Plan B. **Don't publish the draft release** after merging Phase 1 or Phase 2. Publish once, after Plan B's last PR.
 
 ### Task 3: Rule table, types, and the engine type-check
 
