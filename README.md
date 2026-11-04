@@ -31,7 +31,7 @@ The Docker image is published to GHCR and builds for both `linux/amd64` and `lin
 docker-compose up -d
 ```
 
-This pulls `ghcr.io/owine/mlb-deferred-contract-calculator:latest` and serves on port 3000.
+This pulls `ghcr.io/owine/mlb-contract-calculator:latest` and serves on port 3000. Every earlier release tag is available under this name.
 
 ### Building locally
 

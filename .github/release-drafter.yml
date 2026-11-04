@@ -4,5 +4,5 @@ footer: |
   ### Use this release
 
   ```sh
-  docker pull ghcr.io/owine/mlb-deferred-contract-calculator:$RESOLVED_VERSION
+  docker pull ghcr.io/owine/mlb-contract-calculator:$RESOLVED_VERSION
   ```
