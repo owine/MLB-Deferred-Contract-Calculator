@@ -109,10 +109,10 @@ describe('calculate', () => {
         ilirPct: 5,
         deferral: { payments: [{ year: Y1 + 5, amount: 4 }], attribution: 'sequential', statedInterestPct: 0 },
       });
-      const o6 = run(input).charges.filter((c) => c.rules.includes('O6'));
+      const o6 = run(input).charges.filter((c) => c.kind === 'option' && c.label === 'Exercised player option');
       expect(o6).toHaveLength(2);
       for (const c of o6) expect(c.rules).toEqual(expect.arrayContaining(F));
-      expect(run(build([...guaranteed(1, 20), { currentSalary: 10, kind: 'player', buyout: 6 }])).charges.find((c) => c.rules.includes('O6'))!.rules).not.toContain('F2');
+      expect(run(build([...guaranteed(1, 20), { currentSalary: 10, kind: 'player', buyout: 6 }])).charges.find((c) => c.kind === 'option' && c.label === 'Exercised player option')!.rules).not.toContain('F2');
     });
   });
 });
