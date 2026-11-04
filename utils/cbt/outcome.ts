@@ -3,7 +3,7 @@ import type { AavResult } from './aav';
 import { isOptionRow, sortedSeasons } from './classify';
 import type { BonusResult, DeferralResult } from './deferral';
 import type { RuleId } from './rules';
-import type { ContractInput, Charge, Scenario, SeasonClass } from './types';
+import type { ContractInput, Charge, ChargeKind, Scenario, SeasonClass } from './types';
 import type { ValleyResult } from './valley';
 
 export interface OutcomeResult {
@@ -42,6 +42,7 @@ export function attributedCost(
   return perSeason + bonus.cost + (received?.amount ?? 0);
 }
 
+/** `aavRules`: rules behind the deferred part of the AAV (F-rules, A7), added to every AAV charge. */
 export function computeOutcome(
   input: ContractInput,
   scenario: Scenario,
@@ -50,12 +51,13 @@ export function computeOutcome(
   bonus: BonusResult,
   aav: AavResult,
   valley: ValleyResult,
+  aavRules: RuleId[],
 ): OutcomeResult {
   const rows = new Map(sortedSeasons(input).map((r) => [r.season, r]));
   const cost = (season: number) => deferral.costBySeason.get(season) ?? 0;
   const charges: Charge[] = [];
-  const add = (season: number, amount: number, label: string, rules: RuleId[]) =>
-    charges.push({ season, amount, label, rules });
+  const add = (season: number, amount: number, label: string, kind: ChargeKind, rules: RuleId[]) =>
+    charges.push({ season, amount, label, kind, rules });
 
   // END [CONV]: a declined option or a taken opt-out ends the contract; later seasons are void.
   const played: SeasonClass[] = [];
@@ -75,18 +77,18 @@ export function computeOutcome(
     ? exercisedSuch.reduce((s, season) => s + valley.shortfalls.get(season)!, 0) / exercisedSuch.length
     : 0;
   for (const c of played.filter((c) => c.isGuaranteed)) {
-    add(c.season, aav.aav, 'AAV', ['A1', 'A2', ...aav.deemed.rules]);
-    if (valley.shortfalls.has(c.season)) add(c.season, -credit, 'Valley Charge credit', ['V7']);
+    add(c.season, aav.aav, 'AAV', 'aav', ['A1', 'A2', ...aav.deemed.rules, ...aavRules]);
+    if (valley.shortfalls.has(c.season)) add(c.season, -credit, 'Valley Charge credit', 'valleyCredit', ['V7']);
   }
 
   // V4: Valley Charge allocations stay charged even if the season is later nullified (V6).
-  for (const [season, amount] of valley.allocation) add(season, amount, 'Valley Charge', ['V1', 'V2', 'V3', 'V4', 'V5', 'V6']);
+  for (const [season, amount] of valley.allocation) add(season, amount, 'Valley Charge', 'valley', ['V1', 'V2', 'V3', 'V4', 'V5', 'V6']);
 
   // Club-type option exercised or vested (O1, O5) less the buyout previously included (O2).
   for (const c of played.filter((c) => c.effectiveKind === 'club')) {
     const vesting = rows.get(c.season)!.kind === 'vesting';
-    add(c.season, rows.get(c.season)!.currentSalary + cost(c.season), vesting ? 'Vested option' : 'Exercised option', vesting ? ['O1', 'O5'] : ['O1']);
-    if (included(c.season) > 0) add(c.season, -included(c.season), 'Buyout not received', ['O2']);
+    add(c.season, rows.get(c.season)!.currentSalary + cost(c.season), vesting ? 'Vested option' : 'Exercised option', 'option', vesting ? ['O1', 'O5'] : ['O1']);
+    if (included(c.season) > 0) add(c.season, -included(c.season), 'Buyout not received', 'option', ['O2']);
   }
 
   // Non-guaranteed Player Option Years exercised (O6): AAV of their salaries less prorated attributed buyout.
@@ -94,13 +96,13 @@ export function computeOutcome(
   if (ngPlayer.length > 0) {
     const avg = ngPlayer.reduce((s, c) => s + rows.get(c.season)!.currentSalary + cost(c.season), 0) / ngPlayer.length;
     const buyoutShare = ngPlayer.reduce((s, c) => s + included(c.season), 0) / ngPlayer.length;
-    for (const c of ngPlayer) add(c.season, avg - buyoutShare, 'Exercised player option', buyoutShare > 0 ? ['O6', 'O2NS'] : ['O6']);
+    for (const c of ngPlayer) add(c.season, avg - buyoutShare, 'Exercised player option', 'option', buyoutShare > 0 ? ['O6', 'O2NS'] : ['O6']);
   }
 
   // B1: earned bonuses in the season earned (played seasons only).
   for (const c of played) {
     const b = scenario.earnedBonuses[c.season] ?? 0;
-    if (b !== 0) add(c.season, b, 'Earned bonus', ['B1']);
+    if (b !== 0) add(c.season, b, 'Earned bonus', 'bonus', ['B1']);
   }
 
   // Contract end: the buyout or opt-out payment actually received.
@@ -118,18 +120,18 @@ export function computeOutcome(
   if (nullified.length > 0) {
     const paid = attributedCost(input, scenario, played, deferral, bonus, received); // O8: deferrals and A7 bonus at attributed cost
     const attributed = charges
-      .filter((ch) => playedSet.has(ch.season) && !ch.rules.includes('V4') && !ch.rules.includes('V7'))
+      .filter((ch) => playedSet.has(ch.season) && ch.kind !== 'valley' && ch.kind !== 'valleyCredit')
       .reduce((s, ch) => s + ch.amount, 0);
     const per = (paid - attributed) / nullified.length;
     const deferredPaid = played.some((c) => cost(c.season) > 0) || bonus.deferredPieces.length > 0;
     const rules: RuleId[] = deferredPaid ? ['O7', 'O8'] : ['O7'];
     if (credit !== 0) rules.push('V9');
     if (valley.allocation.size > 0) rules.push('V8');
-    for (const c of nullified) add(c.season, per, 'Opt-out true-up', rules);
+    for (const c of nullified) add(c.season, per, 'Opt-out true-up', 'trueUp', [...rules]);
   } else if (received) {
     // O3: the received buyout was already charged as the deemed Signing Bonus; otherwise O4.
     if (aav.deemed.season !== received.season) {
-      add(received.season, received.amount, 'Buyout paid', aav.deemed.a5 ? ['O4', 'O4b'] : ['O4']);
+      add(received.season, received.amount, 'Buyout paid', 'buyout', aav.deemed.a5 ? ['O4', 'O4b'] : ['O4']);
     }
   }
 
@@ -139,7 +141,7 @@ export function computeOutcome(
   for (const c of voided) {
     const inc = included(c.season);
     if (inc <= 0 || received?.season === c.season) continue;
-    if (nullified.length === 0) add(c.season, -inc, 'Buyout not received', ['O2']);
+    if (nullified.length === 0) add(c.season, -inc, 'Buyout not received', 'buyout', ['O2']);
     else if (!notes.includes('O2NS')) notes.push('O2NS');
   }
 

@@ -1,6 +1,7 @@
 // Deferred compensation cost (F1–F7) and signing-bonus cost (A2, A7). Spec §2.3–§2.4.
 import { sortedSeasons } from './classify';
-import type { ContractInput, SeasonClass } from './types';
+import type { RuleId } from './rules';
+import type { ContractInput, Payment, SeasonClass } from './types';
 
 const EPS = 1e-9;
 
@@ -97,15 +98,21 @@ export interface BonusResult {
   deferredPieces: Piece[];
 }
 
-export function signingBonusCost(input: ContractInput, classes: SeasonClass[]): BonusResult {
+/** Signing-bonus cash schedule. With no installments, the whole bonus is paid in the first season (in term: nominal, A2). */
+export function bonusSchedule(input: ContractInput): Payment[] {
   const { amount, payments } = input.signingBonus;
+  if (payments.length > 0) return payments;
+  return [{ year: sortedSeasons(input)[0]?.season ?? -Infinity, amount }];
+}
+
+export function signingBonusCost(input: ContractInput, classes: SeasonClass[]): BonusResult {
+  const { amount } = input.signingBonus;
   const g = classes.filter((c) => c.isGuaranteed).map((c) => c.season);
   const lastG = g.length ? Math.max(...g) : -Infinity;
   const band = withinStatedBand(0, input.ilirPct); // signing bonuses carry no stated interest
   const deferredPieces: Piece[] = [];
   let cost = 0;
-  const schedule = payments.length > 0 ? payments : [{ year: -Infinity, amount }]; // no schedule → paid in term
-  for (const p of schedule) {
+  for (const p of bonusSchedule(input)) {
     if (p.year <= lastG || g.length === 0) {
       cost += p.amount; // A2: in-term installments count at nominal
       continue;
@@ -118,4 +125,13 @@ export function signingBonusCost(input: ContractInput, classes: SeasonClass[]): 
     }
   }
   return { cost, nominal: amount, deferredPieces };
+}
+
+/** Rules behind the deferred part of the AAV: F2–F7 when a Guaranteed season has deferred cost, A7 when a bonus installment is discounted. */
+export function aavDeferralRules(input: ContractInput, classes: SeasonClass[], deferral: DeferralResult, bonus: BonusResult): RuleId[] {
+  const rules: RuleId[] = [];
+  if (classes.some((c) => c.isGuaranteed && (deferral.costBySeason.get(c.season) ?? 0) > 0))
+    rules.push('F2', 'F3', input.deferral.attribution === 'sequential' ? 'F4a' : 'F4b', 'F5', 'F7');
+  if (bonus.deferredPieces.length > 0) rules.push('A7');
+  return rules;
 }

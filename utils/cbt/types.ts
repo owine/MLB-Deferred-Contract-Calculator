@@ -74,10 +74,17 @@ export interface SeasonClass {
   rules: RuleId[];
 }
 
+/**
+ * What a charge is: 'aav' (A1), 'valley' (V4 allocation), 'valleyCredit' (V7), 'option' (O1/O5, O2 on an
+ * exercised option, O6), 'trueUp' (O7), 'buyout' (O4 paid, O2 on a void season), 'bonus' (B1).
+ */
+export type ChargeKind = 'aav' | 'valley' | 'valleyCredit' | 'option' | 'trueUp' | 'buyout' | 'bonus';
+
 export interface Charge {
   season: number;
   amount: number;
   label: string;
+  kind: ChargeKind;
   /** Every rule that determined the amount (spec §6). */
   rules: RuleId[];
 }

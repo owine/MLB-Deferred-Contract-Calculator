@@ -34,4 +34,59 @@ describe('calculate', () => {
     expect(validate(input).map((i) => i.severity)).toEqual(['warning']);
     expect(() => calculate(input, defaultScenario(input))).not.toThrow();
   });
+
+  describe('charge kinds', () => {
+    const kinds = (r: ReturnType<typeof run>) => r.charges.map((c) => c.kind);
+    it('aav, option (O1 and its O2 deduction)', () => {
+      const input = build([...guaranteed(2, 20), { currentSalary: 25, kind: 'club', buyout: 2 }]);
+      expect(kinds(run(input, { options: { [Y1 + 2]: 'exercised' } }))).toEqual(['aav', 'aav', 'option', 'option']);
+    });
+    it('valley, valleyCredit, trueUp', () => {
+      const input = build([...guaranteed(3, 20), { currentSalary: 12, kind: 'player' }]);
+      expect(kinds(run(input))).toEqual(['aav', 'aav', 'aav', 'aav', 'valleyCredit', 'valley', 'valley', 'valley']);
+      expect(kinds(run(input, { options: { [Y1 + 3]: 'declined' } }))).toEqual(['aav', 'aav', 'aav', 'valley', 'valley', 'valley', 'trueUp']);
+    });
+    it('O6 is option; O4 paid and O2 on a void season are buyout; B1 is bonus', () => {
+      const w16 = build([...guaranteed(4, 20), { currentSalary: 25, kind: 'club', buyout: 2 }, { currentSalary: 4, kind: 'player', buyout: 3 }]);
+      const ex = run(w16, { options: { [Y1 + 4]: 'exercised', [Y1 + 5]: 'exercised' } });
+      expect(ex.charges.filter((c) => c.season === Y1 + 5).map((c) => c.kind)).toEqual(['option']);
+      const dec = run(w16, { options: { [Y1 + 4]: 'declined' } });
+      expect(dec.charges.filter((c) => c.season >= Y1 + 4).map((c) => [c.kind, c.amount])).toEqual([
+        ['buyout', 2],
+        ['buyout', -3],
+      ]);
+      expect(kinds(run(build(guaranteed(1, 20)), { earnedBonuses: { [Y1]: 1 } }))).toEqual(['aav', 'bonus']);
+    });
+  });
+
+  it('O7 true-ups each get their own rules array', () => {
+    const input = build(guaranteed(4, 20), { optOuts: [{ afterSeason: Y1 + 1, payment: 0 }] });
+    const ups = run(input, { optOutTakenAfter: Y1 + 1 }).charges.filter((c) => c.kind === 'trueUp');
+    expect(ups).toHaveLength(2);
+    expect(ups[0].rules).toEqual(ups[1].rules);
+    expect(ups[0].rules).not.toBe(ups[1].rules);
+  });
+
+  describe('AAV charge rules', () => {
+    const aavRules = (r: ReturnType<typeof run>) => r.charges.find((c) => c.kind === 'aav')!.rules;
+    const F = ['F2', 'F3', 'F4a', 'F5', 'F7'];
+    it('carry the F-rules when a Guaranteed season has deferred cost', () => {
+      const input = build([{ currentSalary: 5, deferred: 5 }], {
+        ilirPct: 4,
+        deferral: { payments: [{ year: Y1 + 3, amount: 5 }], attribution: 'sequential', statedInterestPct: 0 },
+      });
+      expect(aavRules(run(input))).toEqual(['A1', 'A2', ...F]);
+    });
+    it('carry no F-rules when only an option year has deferred cost', () => {
+      const input = build([...guaranteed(1, 10), { currentSalary: 5, deferred: 5, kind: 'club' }], {
+        ilirPct: 5,
+        deferral: { payments: [{ year: Y1 + 4, amount: 5 }], attribution: 'sequential', statedInterestPct: 0 },
+      });
+      expect(aavRules(run(input, { options: { [Y1 + 1]: 'exercised' } }))).toEqual(['A1', 'A2']);
+    });
+    it('carry A7 when a signing-bonus installment falls after the term', () => {
+      const input = build(guaranteed(2, 10), { ilirPct: 4, signingBonus: { amount: 4, payments: [{ year: Y1 + 4, amount: 4 }] } });
+      expect(aavRules(run(input))).toEqual(['A1', 'A2', 'A7']);
+    });
+  });
 });

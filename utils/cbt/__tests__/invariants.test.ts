@@ -64,7 +64,7 @@ describe('invariants', () => {
       const stays = calculate(input, defaultScenario(input));
       expect(stays.totals.cbt).toBeCloseTo(stays.totals.attributedCost, 6);
       const leaves = calculate(input, { ...defaultScenario(input), optOutTakenAfter: Y1 + pre - 1 });
-      const valley = leaves.charges.filter((c) => c.rules.includes('V4')).reduce((s, c) => s + c.amount, 0);
+      const valley = leaves.charges.filter((c) => c.kind === 'valley').reduce((s, c) => s + c.amount, 0);
       expect(valley).toBeGreaterThan(0);
       expect(leaves.totals.cbt - leaves.totals.attributedCost).toBeCloseTo(valley, 6);
     }
@@ -96,7 +96,7 @@ describe('invariants', () => {
       for (const sc of scenarios(input)) {
         for (const optOutTakenAfter of optOutAfter === null ? [null] : [null, optOutAfter]) {
           const r = calculate(input, { ...sc, optOutTakenAfter });
-          const valley = r.charges.filter((c) => c.rules.includes('V4') || c.rules.includes('V7')).reduce((s, c) => s + c.amount, 0);
+          const valley = r.charges.filter((c) => c.kind === 'valley' || c.kind === 'valleyCredit').reduce((s, c) => s + c.amount, 0);
           expect(r.totals.cbt - r.totals.attributedCost).toBeCloseTo(valley, 6);
           checked++;
         }

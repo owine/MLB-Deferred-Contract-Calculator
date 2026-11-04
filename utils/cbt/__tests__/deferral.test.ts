@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { classify } from '../classify';
-import { deferralCosts, signingBonusCost, withinStatedBand } from '../deferral';
+import { bonusSchedule, deferralCosts, signingBonusCost, withinStatedBand } from '../deferral';
 import { build, guaranteed, Y1 } from './helpers';
 
 const w7 = (ilirPct: number) =>
@@ -72,5 +72,11 @@ describe('deferral cost (F3–F7)', () => {
     const b = signingBonusCost(input, classify(input));
     expect(b.cost).toBeCloseTo(2 + 2 / 1.05 ** 4 + 2 / 1.05 ** 3, 9);
     expect(b.deferredPieces).toHaveLength(2);
+  });
+
+  it('A2 a signing bonus with no schedule is paid in the first season and counts at nominal', () => {
+    const input = build([...guaranteed(2, 10), { currentSalary: 10, kind: 'club', buyout: 1 }], { ilirPct: 4, signingBonus: { amount: 6, payments: [] } });
+    expect(bonusSchedule(input)).toEqual([{ year: Y1, amount: 6 }]);
+    expect(signingBonusCost(input, classify(input))).toEqual({ cost: 6, nominal: 6, deferredPieces: [] });
   });
 });
