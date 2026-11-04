@@ -7,9 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Dev server:** `pnpm run dev` (serves on port 3000, binds 0.0.0.0)
 - **Build:** `pnpm run build` (Vite production build to `dist/`)
 - **Preview build:** `pnpm run preview`
+- **Tests:** `pnpm test` (Vitest, `vitest run`; also runs in CI)
 - **Docker:** `docker-compose up -d` (builds and serves on port 3000)
 
-There are no tests, linting, or formatting configured.
+There is no linting or formatting configured.
 
 ## Architecture
 
