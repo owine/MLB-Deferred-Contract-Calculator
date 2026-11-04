@@ -20,13 +20,20 @@ Each is test-first, and the spec records it.
 ## How this plan was verified
 
 Every code block was generated from a prototype worktree branched from `main` at `c510ee5`; none was retyped. In the prototype:
-- **Tests:** `pnpm test` passed **172 tests in 13 files**. Both `pnpm run typecheck` (whole project) and `pnpm run typecheck:engine` (strict) gave **0 errors**. `pnpm run build` succeeded.
+- **Tests:** `pnpm test` passed **173 tests in 13 files**. Both `pnpm run typecheck` (whole project) and `pnpm run typecheck:engine` (strict) gave **0 errors**. `pnpm run build` succeeded.
 - **Browser (Playwright, 1440px and 400px):**
   - All 13 presets load, and the displayed "Reported CBT · Engine · Δ" lines are within each source's precision. Nine are exact; Ohtani Δ $1,476 against a figure published to $10K; Scherzer Δ $648, documented; Vlad Jr. Δ $286 against a figure published to $1K.
   - Bellinger opting out after 2027 shows $109.5M CBT against $85M cash, plus the V8 quote.
   - Clearing a salary shows a validation error, highlights the row and hides results without crashing.
   - Switching Snell to the CBA-default attribution shows the AP's $31,357,257.
   - At 400px there is no horizontal page overflow.
+- **Real input, after review (actual typing, Tab and Enter, not scripted DOM events):**
+  - Typing "12" into Length keeps 5 seasons until Tab, then shows 12 with the originals and opt-outs intact.
+  - An invalid earned bonus keeps the scenario panel and field mounted while it shows the error, and fixing it restores results.
+  - Enter on a year-table row button sets `aria-expanded="true"` and shows every rule, TEXT included, with its cite.
+  - Shift+Tab onto an info icon shows its tooltip.
+  - The deferred column is disabled in unattributed mode.
+  - Errors read "2027: …" with `aria-invalid`.
 - **Engine changes, each test-first:**
   - **F4(c) pro-rata** reproduces Cot's and the AP's Tucker figure ($57,195,945) and MLBTR's Bregman/Cubs figure ($30,893,902) to the dollar.
   - **The V11 scope fix** came from the Bichette preset. The first implementation gave him a spurious $1.2M Valley Charge; the spec text scopes V11 to the V3 floor.
@@ -49,12 +56,13 @@ If an actual output differs from the expected output, stop and report. Don't edi
 | File | Responsibility |
 |---|---|
 | `utils/cbt/types.ts`, `index.ts`, `outcome.ts` | `Result.playedSeasons`; END flag only when it voids a counting season |
-| `utils/cbt/deferral.ts`, `rules.ts` | F4(c) `'prorata'` attribution and the `F4c` rule |
+| `utils/cbt/deferral.ts`, `rules.ts`, `flags.ts` | F4(c) `'prorata'` attribution, the `F4c` rule, and D5 flagged in pro-rata mode |
 | `utils/cbt/valley.ts` | V11 scope: deemed buyouts only in the V3 floor |
 | `data/presets.ts` | `group` field; nine new sourced presets (13 in total) |
 | `utils/format.ts` | Money formatting and parsing (replaces the former `utils/calculations.ts` helpers) |
 | `utils/form.ts` | Pure contract-editing helpers and `syncScenario` |
-| `components/fields.tsx` | Shared `Label`, `MoneyInput`, `NumberInput`, style constants |
+| `components/fields.tsx` | Shared `Label`, `MoneyInput`, `NumberInput`, `CommitNumberInput` (commits on blur or Enter), style constants |
+| `components/InfoTooltip.tsx` | Accessible tooltip: a focusable button that opens on hover, focus or tap |
 | `components/PaymentsEditor.tsx` | `{year, amount}` list editor with an equal-payments generator |
 | `components/PresetBar.tsx` | Grouped preset select, note, sources, reconciliation |
 | `components/ContractTerms.tsx` | First season, length, fill evenly, ILIR, signing bonus |
@@ -81,15 +89,11 @@ Removed: `utils/calculations.ts` and `utils/__tests__/calculations.test.ts`.
 
 **Files:** Modify `package.json` and `pnpm-lock.yaml`; create `vite-env.d.ts`; commit this plan.
 
-- [ ] **Step 1: Branch and commit the plan**
+- [ ] **Step 1: Check out the branch.** `feat/contract-ui` already exists, and this plan is committed on it as its first commit(s).
 
 ```bash
-git checkout main && git pull --ff-only && git checkout -b feat/contract-ui
-git add docs/superpowers/plans/2026-11-04-cbt-ui-plan-b.md
-git commit -m "docs: add CBT UI implementation plan B"
+git checkout feat/contract-ui && git log --oneline main..HEAD   # expect only "docs: … plan B" commit(s)
 ```
-
-(If the plan file isn't on disk in this checkout, the controller provides it. Commit it as-is.)
 
 - [ ] **Step 2: Install the React type definitions (exact pins)**
 
@@ -513,7 +517,7 @@ git commit -m "feat: expose played seasons; flag END only when it voids a counti
 
 ### Task 3: Engine — F4(c) pro-rata attribution
 
-**Files:** Create `utils/cbt/__tests__/prorata.test.ts`; replace `utils/cbt/deferral.ts` and `utils/cbt/rules.ts`.
+**Files:** Create `utils/cbt/__tests__/prorata.test.ts`; replace `utils/cbt/deferral.ts`, `utils/cbt/rules.ts` and `utils/cbt/flags.ts`.
 
 - [ ] **Step 1: Write the failing test.** `utils/cbt/__tests__/prorata.test.ts`:
 
@@ -523,6 +527,7 @@ import { describe, expect, it } from 'vitest';
 import { classify } from '../classify';
 import { deferralCosts } from '../deferral';
 import { validate } from '../validate';
+import { calculate, defaultScenario } from '..';
 import { build, Y1 } from './helpers';
 
 const M = 1_000_000;
@@ -558,13 +563,22 @@ describe('F4c pro-rata attribution', () => {
     });
     expect(validate(input).some((i) => i.severity === 'error' && i.rule === 'F7')).toBe(true);
   });
+
+  it('D5 is flagged in pro-rata mode when a 50% test reads a season with deferred pay', () => {
+    const input = build([{ currentSalary: 20 }, { currentSalary: 10, deferred: 5 }], {
+      ilirPct: 4,
+      optOuts: [{ afterSeason: Y1, payment: 0 }],
+      deferral: { payments: [{ year: Y1 + 4, amount: 5 }], attribution: 'prorata', statedInterestPct: 0 },
+    });
+    expect(calculate(input, defaultScenario(input)).flags.map((f) => f.rule)).toContain('D5');
+  });
 });
 ```
 
 - [ ] **Step 2: Run it to confirm it fails**
 
 Run: `pnpm exec vitest run utils/cbt/__tests__/prorata.test.ts`
-Expected: FAIL. `'prorata'` falls through to the unattributed branch, giving `AssertionError: expected 16.865400733233578 to be close to 8.432700366616789`, and the Bregman figure misses.
+Expected: FAIL. `'prorata'` falls through to the unattributed branch, giving `AssertionError: expected 16.865400733233578 to be close to 8.432700366616789`; the Bregman figure misses; and D5 isn't flagged in pro-rata mode.
 
 - [ ] **Step 3: Replace `utils/cbt/deferral.ts`**
 
@@ -882,15 +896,61 @@ export const RULES = {
 export type RuleId = keyof typeof RULES;
 ```
 
-- [ ] **Step 5: Run it to confirm it passes**
+- [ ] **Step 5: Replace `utils/cbt/flags.ts`.** D5 now applies in pro-rata mode as well as sequential, because both read the per-season `deferred` values.
+
+```ts
+// Flags (spec §5.1, §6): every [PRACTICE]/[INTERP]/[CONV] rule that moved a number, plus the V8 callout.
+import { sortedSeasons } from './classify';
+import type { DeferralResult } from './deferral';
+import { MONEY_EPS } from './money';
+import type { OutcomeResult } from './outcome';
+import { RULES, type RuleId } from './rules';
+import type { ContractInput, Flag, Result, SeasonClass } from './types';
+import type { ValleyResult } from './valley';
+
+export function collectFlags(
+  input: ContractInput,
+  classes: SeasonClass[],
+  deferral: DeferralResult,
+  valley: ValleyResult,
+  outcome: OutcomeResult,
+  funding: Result['funding'],
+): Flag[] {
+  const rows = new Map(sortedSeasons(input).map((r) => [r.season, r]));
+  const flags: Flag[] = [];
+  const flag = (r: RuleId) => {
+    if (!flags.some((f) => f.rule === r)) flags.push({ rule: r, message: RULES[r].summary });
+  };
+  for (const ch of outcome.charges) {
+    if (Math.abs(ch.amount) <= MONEY_EPS) continue; // a zero charge moved nothing
+    for (const r of ch.rules) if (RULES[r].tag !== 'TEXT' || r === 'V8') flag(r);
+  }
+  outcome.notes.forEach(flag); // END, O2NS: changed the result without a charge of their own
+  // D5: a 50% test or Valley value read a season that has deferred pay (per-season `deferred` is used in sequential and pro-rata modes).
+  if (input.deferral.attribution !== 'unattributed' && classes.some((c) => c.rules.includes('D5') && (rows.get(c.season)?.deferred ?? 0) > 0))
+    flag('D5');
+  // F6: the 1.5-point band edge decided stated value vs discounting.
+  if (deferral.pieces.length > 0 && Math.abs(Math.abs(input.deferral.statedInterestPct - input.ilirPct) - 1.5) < 1e-9) flag('F6');
+  // V10: a non-guaranteed player option year was excluded from the Valley test.
+  if (classes.some((c) => c.effectiveKind === 'player' && !c.isGuaranteed)) flag('V10');
+  if (valley.usedV11) flag('V11');
+  if (funding.snapshots.length > 0) {
+    flag('X4');
+    flag('X5');
+  }
+  return flags;
+}
+```
+
+- [ ] **Step 6: Run it to confirm it passes**
 
 Run: `pnpm exec vitest run utils/cbt/__tests__/prorata.test.ts && pnpm run typecheck:engine && pnpm test`
-Expected: `Tests  3 passed (3)`, the type-check exits 0, and the full suite reports `Tests  143 passed (143)`.
+Expected: `Tests  4 passed (4)`, the type-check exits 0, and the full suite reports `Tests  144 passed (144)`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add utils/cbt/__tests__/prorata.test.ts utils/cbt/deferral.ts utils/cbt/rules.ts
+git add utils/cbt/__tests__/prorata.test.ts utils/cbt/deferral.ts utils/cbt/rules.ts utils/cbt/flags.ts
 git commit -m "feat: add pro-rata deferral attribution (F4c)"
 ```
 
@@ -1050,7 +1110,7 @@ export function computeValley(
 - [ ] **Step 4: Run it to confirm it passes**
 
 Run: `pnpm exec vitest run utils/cbt/__tests__/valley.test.ts && pnpm run typecheck:engine && pnpm test`
-Expected: `Tests  7 passed (7)`, the type-check exits 0, and the full suite reports `Tests  144 passed (144)`. Every earlier worked example is unchanged.
+Expected: `Tests  7 passed (7)`, the type-check exits 0, and the full suite reports `Tests  145 passed (145)`. Every earlier worked example is unchanged.
 
 - [ ] **Step 5: Commit**
 
@@ -1466,7 +1526,7 @@ export const PRESETS: Preset[] = [
 - [ ] **Step 4: Run it to confirm it passes**
 
 Run: `pnpm exec vitest run utils/cbt/__tests__/presets.test.ts && pnpm run typecheck:engine && pnpm test`
-Expected: `Tests  33 passed (33)`, the type-check exits 0, and the full suite reports `Tests  165 passed (165)`.
+Expected: `Tests  33 passed (33)`, the type-check exits 0, and the full suite reports `Tests  166 passed (166)`.
 
 - [ ] **Step 5: Commit**
 
@@ -1723,7 +1783,7 @@ export function syncScenario(input: ContractInput, scenario: Scenario): Scenario
 - [ ] **Step 5: Run it to confirm it passes**
 
 Run: `pnpm exec vitest run utils/__tests__/form.test.ts && pnpm test`
-Expected: `Tests  9 passed (9)`, and the full suite reports `Tests  174 passed (174)`.
+Expected: `Tests  9 passed (9)`, and the full suite reports `Tests  175 passed (175)`.
 
 - [ ] **Step 6: Commit**
 
@@ -1734,7 +1794,7 @@ git commit -m "feat: add contract-editing and formatting helpers"
 
 ### Task 7: Input components
 
-**Files:** Create `components/fields.tsx`, `components/PaymentsEditor.tsx`, `components/PresetBar.tsx`, `components/ContractTerms.tsx`, `components/ScheduleEditor.tsx`, `components/DeferralEditor.tsx` and `components/IssuesList.tsx`. `components/InfoTooltip.tsx` is unchanged.
+**Files:** Create `components/fields.tsx`, `components/PaymentsEditor.tsx`, `components/PresetBar.tsx`, `components/ContractTerms.tsx`, `components/ScheduleEditor.tsx`, `components/DeferralEditor.tsx` and `components/IssuesList.tsx`; replace `components/InfoTooltip.tsx`.
 
 - [ ] **Step 1: Create `components/fields.tsx`**
 
@@ -1763,7 +1823,8 @@ export const MoneyInput: React.FC<{
   invalid?: boolean;
   compact?: boolean;
   ariaLabel?: string;
-}> = ({ value, onChange, id, invalid, compact, ariaLabel }) => {
+  disabled?: boolean;
+}> = ({ value, onChange, id, invalid, compact, ariaLabel, disabled }) => {
   const [text, setText] = useState(moneyInputValue(value));
   const [focused, setFocused] = useState(false);
   useEffect(() => {
@@ -1778,13 +1839,15 @@ export const MoneyInput: React.FC<{
         inputMode="decimal"
         type="text"
         value={text}
+        disabled={disabled}
+        aria-invalid={invalid || undefined}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         onChange={(e) => {
           setText(e.target.value);
           onChange(parseMoney(e.target.value));
         }}
-        className={`${inputClass} font-mono ${compact ? 'pl-5 pr-2 py-1 text-sm' : 'pl-8 pr-3 py-2 text-lg'} ${invalid ? errorRing : ''}`}
+        className={`${inputClass} font-mono ${compact ? 'pl-5 pr-2 py-1 text-sm' : 'pl-8 pr-3 py-2 text-lg'} ${invalid ? errorRing : ''} disabled:opacity-40 disabled:cursor-not-allowed`}
       />
     </div>
   );
@@ -1808,16 +1871,52 @@ export const NumberInput: React.FC<{
     step={step}
     min={min}
     value={Number.isFinite(value) ? value : ''}
+    aria-invalid={invalid || undefined}
     onChange={(e) => onChange(e.target.value === '' ? NaN : Number(e.target.value))}
     className={`${inputClass} ${compact ? 'px-2 py-1 text-sm' : 'px-3 py-2 text-lg'} ${invalid ? errorRing : ''}`}
   />
 );
+
+/**
+ * Whole-number input for structural values (first season, length): edits a local draft and commits only on
+ * blur or Enter, so intermediate keystrokes ("1" on the way to "12") never reshape the contract. Invalid → revert.
+ */
+export const CommitNumberInput: React.FC<{
+  value: number;
+  onCommit: (n: number) => void;
+  id?: string;
+  min?: number;
+}> = ({ value, onCommit, id, min }) => {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
+  const commit = () => {
+    const n = Number(draft);
+    if (draft.trim() !== '' && Number.isInteger(n) && (min === undefined || n >= min)) onCommit(n);
+    else setDraft(String(value));
+  };
+  return (
+    <input
+      id={id}
+      type="number"
+      inputMode="numeric"
+      min={min}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') setDraft(String(value));
+      }}
+      className={`${inputClass} px-3 py-2 text-lg`}
+    />
+  );
+};
 ```
 
 - [ ] **Step 2: Create `components/PaymentsEditor.tsx`**
 
 ```tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { Payment } from '../utils/cbt';
 import { equalPayments } from '../utils/form';
@@ -1834,6 +1933,8 @@ export const PaymentsEditor: React.FC<{
 }> = ({ payments, onChange, defaultYear, generateTotal, label }) => {
   const [count, setCount] = useState(5);
   const [firstYear, setFirstYear] = useState(defaultYear);
+  useEffect(() => setFirstYear(defaultYear), [defaultYear]); // follow the contract when its seasons move
+  const canGenerate = Number.isInteger(count) && count >= 1 && Number.isInteger(firstYear) && generateTotal !== undefined && generateTotal > 0;
   const set = (i: number, patch: Partial<Payment>) => onChange(payments.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   return (
     <div className="space-y-2">
@@ -1867,8 +1968,9 @@ export const PaymentsEditor: React.FC<{
             <input aria-label="First payment year" type="number" value={firstYear} onChange={(e) => setFirstYear(Number(e.target.value))} className="w-16 border border-slate-300 rounded px-1 py-0.5" />
             <button
               type="button"
-              onClick={() => onChange(equalPayments(firstYear, count, generateTotal))}
-              className="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded"
+              disabled={!canGenerate}
+              onClick={() => canGenerate && onChange(equalPayments(firstYear, count, generateTotal))}
+              className="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded disabled:opacity-50"
             >
               Generate
             </button>
@@ -1959,7 +2061,7 @@ export const PresetBar: React.FC<{ presets: Preset[]; activeId: string | null; o
 import React, { useState } from 'react';
 import type { ContractInput } from '../utils/cbt';
 import { fillEvenly, setLength, setStartSeason, sortRows } from '../utils/form';
-import { Label, MoneyInput, NumberInput } from './fields';
+import { CommitNumberInput, Label, MoneyInput, NumberInput } from './fields';
 import { PaymentsEditor } from './PaymentsEditor';
 
 const ILIR_TIP =
@@ -1975,11 +2077,11 @@ export const ContractTerms: React.FC<{ input: ContractInput; onChange: (next: Co
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label text="First Season" htmlFor="start-season" />
-          <NumberInput id="start-season" value={rows[0]?.season ?? NaN} onChange={(y) => onChange(setStartSeason(input, y))} />
+          <CommitNumberInput id="start-season" value={rows[0]?.season ?? 2026} onCommit={(y) => onChange(setStartSeason(input, y))} />
         </div>
         <div>
           <Label text="Length (Seasons)" htmlFor="length" />
-          <NumberInput id="length" min="1" value={rows.length} onChange={(n) => onChange(setLength(input, n))} />
+          <CommitNumberInput id="length" min={1} value={rows.length} onCommit={(n) => onChange(setLength(input, n))} />
         </div>
       </div>
 
@@ -2014,7 +2116,7 @@ export const ContractTerms: React.FC<{ input: ContractInput; onChange: (next: Co
           />
         </div>
       </div>
-      {input.signingBonus.amount > 0 && (
+      {(input.signingBonus.amount > 0 || input.signingBonus.payments.length > 0) && (
         <details className="text-sm" open={input.signingBonus.payments.length > 0}>
           <summary className="cursor-pointer text-slate-600">Signing bonus payment schedule ({input.signingBonus.payments.length || 'paid in first season'})</summary>
           <div className="mt-2">
@@ -2062,6 +2164,7 @@ export const ScheduleEditor: React.FC<{
   onChange: (next: ContractInput) => void;
 }> = ({ input, issues, onChange }) => {
   const rows = sortRows(input.seasons);
+  const unattributed = input.deferral.attribution === 'unattributed';
   const bad = (season: number) => issues.some((i) => i.severity === 'error' && i.field.startsWith(`seasons.${season}`));
   return (
     <div className="overflow-x-auto -mx-2">
@@ -2089,10 +2192,17 @@ export const ScheduleEditor: React.FC<{
                 <tr className={bad(r.season) ? 'bg-red-50' : ''}>
                   <td className="px-2 py-1 font-medium text-slate-700">{r.season}</td>
                   <td className="px-2 py-1 min-w-[8rem]">
-                    <MoneyInput compact value={r.currentSalary} onChange={(currentSalary) => onChange(updateRow(input, r.season, { currentSalary }))} ariaLabel={`${r.season} current salary`} />
+                    <MoneyInput compact invalid={bad(r.season)} value={r.currentSalary} onChange={(currentSalary) => onChange(updateRow(input, r.season, { currentSalary }))} ariaLabel={`${r.season} current salary`} />
                   </td>
                   <td className="px-2 py-1 min-w-[7rem]">
-                    <MoneyInput compact value={r.deferred} onChange={(deferred) => onChange(updateRow(input, r.season, { deferred }))} ariaLabel={`${r.season} deferred`} />
+                    <MoneyInput
+                      compact
+                      invalid={bad(r.season)}
+                      disabled={unattributed}
+                      value={r.deferred}
+                      onChange={(deferred) => onChange(updateRow(input, r.season, { deferred }))}
+                      ariaLabel={unattributed ? `${r.season} deferred (not used: deferrals are not assigned to seasons)` : `${r.season} deferred`}
+                    />
                   </td>
                   <td className="px-2 py-1">
                     <select
@@ -2118,7 +2228,7 @@ export const ScheduleEditor: React.FC<{
                   </td>
                   <td className="px-2 py-1 min-w-[7rem]">
                     {OPTION.has(r.kind) ? (
-                      <MoneyInput compact value={r.buyout ?? 0} onChange={(buyout) => onChange(updateRow(input, r.season, { buyout }))} ariaLabel={`${r.season} buyout`} />
+                      <MoneyInput compact invalid={bad(r.season)} value={r.buyout ?? 0} onChange={(buyout) => onChange(updateRow(input, r.season, { buyout }))} ariaLabel={`${r.season} buyout`} />
                     ) : (
                       <span className="text-slate-300">—</span>
                     )}
@@ -2235,6 +2345,12 @@ import React from 'react';
 import { AlertCircle, AlertTriangle } from 'lucide-react';
 import type { ValidationIssue } from '../utils/cbt';
 
+/** Prefix a season-level message with its season ("2027: …") so errors aren't conveyed by row colour alone. */
+const describe = (i: ValidationIssue) => {
+  const season = /^seasons\.(\d{4})/.exec(i.field)?.[1];
+  return season && !i.message.includes(season) ? `${season}: ${i.message}` : i.message;
+};
+
 export const IssuesList: React.FC<{ issues: ValidationIssue[] }> = ({ issues }) => {
   if (issues.length === 0) return null;
   const errors = issues.filter((i) => i.severity === 'error');
@@ -2248,7 +2364,7 @@ export const IssuesList: React.FC<{ issues: ValidationIssue[] }> = ({ issues }) 
           </p>
           <ul className="list-disc pl-5 space-y-0.5">
             {errors.map((e, i) => (
-              <li key={i}>{e.message}{e.rule && <span className="font-mono text-xs text-red-500"> · {e.rule}</span>}</li>
+              <li key={i}>{describe(e)}{e.rule && <span className="font-mono text-xs text-red-500"> · {e.rule}</span>}</li>
             ))}
           </ul>
         </div>
@@ -2257,7 +2373,7 @@ export const IssuesList: React.FC<{ issues: ValidationIssue[] }> = ({ issues }) 
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
           <ul className="space-y-0.5">
             {warnings.map((w, i) => (
-              <li key={i} className="flex gap-1"><AlertTriangle size={14} className="mt-0.5 shrink-0" />{w.message}</li>
+              <li key={i} className="flex gap-1"><AlertTriangle size={14} className="mt-0.5 shrink-0" />{describe(w)}</li>
             ))}
           </ul>
         </div>
@@ -2267,15 +2383,59 @@ export const IssuesList: React.FC<{ issues: ValidationIssue[] }> = ({ issues }) 
 };
 ```
 
-- [ ] **Step 8: Type-check**
+- [ ] **Step 8: Replace `components/InfoTooltip.tsx`.** It becomes a focusable button that opens on hover, focus or tap, with `aria-describedby`.
+
+```tsx
+import React, { useId, useState } from 'react';
+import { Info } from 'lucide-react';
+
+interface InfoTooltipProps {
+  text: string;
+}
+
+/** Explanation bubble: opens on hover, keyboard focus or tap; the text is linked to the button for screen readers. */
+export const InfoTooltip: React.FC<InfoTooltipProps> = ({ text }) => {
+  const [show, setShow] = useState(false);
+  const id = useId();
+
+  return (
+    <span className="relative inline-block ml-2 align-middle">
+      <button
+        type="button"
+        aria-label="More information"
+        aria-describedby={id}
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onFocus={() => setShow(true)}
+        onBlur={() => setShow(false)}
+        onClick={() => setShow((s) => !s)}
+        onKeyDown={(e) => e.key === 'Escape' && setShow(false)}
+        className="text-gray-400 hover:text-blue-500 focus:text-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-full transition-colors"
+      >
+        <Info size={16} />
+      </button>
+      <span
+        id={id}
+        role="tooltip"
+        className={`${show ? 'block' : 'hidden'} absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-3 bg-slate-800 text-white text-xs font-normal normal-case rounded shadow-lg z-50 pointer-events-none`}
+      >
+        {text}
+        <span className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-slate-800"></span>
+      </span>
+    </span>
+  );
+};
+```
+
+- [ ] **Step 9: Type-check**
 
 Run: `pnpm run typecheck`
 Expected: only the 2 pre-existing `App.tsx(530,25)` and `App.tsx(535,25)` errors. Nothing in `components/`.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add components/fields.tsx components/PaymentsEditor.tsx components/PresetBar.tsx components/ContractTerms.tsx components/ScheduleEditor.tsx components/DeferralEditor.tsx components/IssuesList.tsx
+git add components/fields.tsx components/PaymentsEditor.tsx components/PresetBar.tsx components/ContractTerms.tsx components/ScheduleEditor.tsx components/DeferralEditor.tsx components/IssuesList.tsx components/InfoTooltip.tsx
 git commit -m "feat: add contract input components"
 ```
 
@@ -2538,16 +2698,18 @@ function status(c: SeasonClass | undefined, played: boolean): string {
 export const YearTable: React.FC<{ result: Result }> = ({ result }) => {
   const [open, setOpen] = useState<Set<number>>(new Set());
   const played = new Set(result.playedSeasons);
-  const toggle = (s: number) => setOpen((prev) => {
-    const next = new Set(prev);
-    if (next.has(s)) next.delete(s); else next.add(s);
-    return next;
-  });
+  const toggle = (s: number) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
   return (
     <div className={`${cardClass} overflow-hidden`}>
       <div className="px-6 py-4 border-b border-slate-100 flex items-baseline justify-between">
         <h3 className="font-semibold text-slate-800">Year-by-Year Breakdown</h3>
-        <span className="text-xs text-slate-400">click a season to see why</span>
+        <span className="text-xs text-slate-400">expand a season to see why</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
@@ -2564,38 +2726,57 @@ export const YearTable: React.FC<{ result: Result }> = ({ result }) => {
               const charges = result.charges.filter((c) => c.season === row.season);
               const cls = result.classification.find((c) => c.season === row.season);
               const isOpen = open.has(row.season);
+              const detailsId = `season-${row.season}-charges`;
               return (
                 <React.Fragment key={row.season}>
-                  <tr className={`hover:bg-slate-50 ${charges.length ? 'cursor-pointer' : ''}`} onClick={() => charges.length && toggle(row.season)}>
+                  <tr className="hover:bg-slate-50">
                     <td className="px-6 py-3 font-medium text-slate-700">
-                      <span className="inline-flex items-center gap-1">
-                        {charges.length > 0 ? (isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />) : <span className="w-[14px]" />}
-                        {row.season}
-                      </span>
+                      {charges.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => toggle(row.season)}
+                          aria-expanded={isOpen}
+                          aria-controls={detailsId}
+                          aria-label={`${row.season}: ${isOpen ? 'hide' : 'show'} ${charges.length} charge${charges.length === 1 ? '' : 's'}`}
+                          className="inline-flex items-center gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                        >
+                          {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                          {row.season}
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="w-[14px]" />
+                          {row.season}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-3 text-slate-500">{status(cls, played.has(row.season))}</td>
                     <td className="px-6 py-3 text-right font-medium bg-blue-50/30 text-blue-600 font-mono">{charges.length ? formatMoney(row.cbt) : '—'}</td>
                     <td className="px-6 py-3 text-right text-slate-800 font-mono">{row.cash ? formatMoney(row.cash) : '—'}</td>
                   </tr>
-                  {isOpen &&
-                    charges.map((c, i) => (
-                      <tr key={i} className="bg-slate-50/60 text-xs">
-                        <td />
-                        <td className="px-6 py-1.5 text-slate-600" colSpan={1}>
-                          {c.label}
-                          <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
-                            {c.rules.map((r) => (
-                              <span key={r} title={`${RULES[r].cite} — ${RULES[r].summary}`} className="inline-flex items-center gap-0.5">
-                                <span className="font-mono text-slate-500">{r}</span>
-                                {RULES[r].tag !== 'TEXT' && <TagBadge tag={RULES[r].tag} />}
+                  {isOpen && (
+                    <tr id={detailsId} className="bg-slate-50/60 text-xs">
+                      <td colSpan={4} className="px-6 py-2">
+                        <ul className="space-y-2">
+                          {charges.map((c, i) => (
+                            <li key={i} className="grid grid-cols-[1fr_auto] gap-x-4">
+                              <span className="text-slate-700">{c.label}</span>
+                              <span className="text-right font-mono text-blue-700">{formatMoney(c.amount)}</span>
+                              <span className="col-span-2 flex flex-wrap gap-x-3 gap-y-1 text-slate-500">
+                                {c.rules.map((r) => (
+                                  <span key={r} className="inline-flex items-center gap-1">
+                                    <span className="font-mono text-slate-600">{r}</span>
+                                    <TagBadge tag={RULES[r].tag} />
+                                    <span>{RULES[r].cite}</span>
+                                  </span>
+                                ))}
                               </span>
-                            ))}
-                          </span>
-                        </td>
-                        <td className="px-6 py-1.5 text-right font-mono text-blue-700">{formatMoney(c.amount)}</td>
-                        <td />
-                      </tr>
-                    ))}
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    </tr>
+                  )}
                 </React.Fragment>
               );
             })}
@@ -2849,6 +3030,7 @@ const App: React.FC = () => {
   const [showDeferral, setShowDeferral] = useState(false);
 
   const edit = (next: ContractInput) => {
+    if (next === input) return; // no-op edits (e.g. an invalid length) keep the preset and its reconciliation
     setInput(next);
     setScenario((s) => syncScenario(next, s));
     setPresetId(null); // the preset's reported figure no longer applies
@@ -2930,10 +3112,11 @@ const App: React.FC = () => {
               <h2 className="text-lg font-semibold text-slate-800 mb-3">Season by Season</h2>
               <ScheduleEditor input={input} issues={issues} onChange={edit} />
             </div>
+            {/* Always rendered: it holds the earned-bonus inputs, so an invalid bonus must stay editable. */}
+            <ScenarioPanel input={input} scenario={scenario} playedSeasons={result?.playedSeasons ?? null} onChange={setScenario} />
             {result ? (
               <>
                 <ResultCards result={result} />
-                <ScenarioPanel input={input} scenario={scenario} playedSeasons={result.playedSeasons} onChange={setScenario} />
                 <FlagsCallout flags={result.flags} />
                 <CbtChart result={result} />
                 <YearTable result={result} />
@@ -2986,7 +3169,7 @@ git rm utils/calculations.ts utils/__tests__/calculations.test.ts
 - [ ] **Step 4: Verify**
 
 Run: `pnpm run typecheck && pnpm run typecheck:engine && pnpm test && pnpm run build`
-Expected: both type-checks exit 0 with no errors, then `Test Files  13 passed (13)`, `Tests  172 passed (172)`, then `✓ built in`.
+Expected: both type-checks exit 0 with no errors, then `Test Files  13 passed (13)`, `Tests  173 passed (173)`, then `✓ built in`.
 
 - [ ] **Step 5: Smoke-test in a browser** (the controller may do this step)
 
@@ -2994,7 +3177,9 @@ Run `pnpm exec vite --port 3107 --strictPort --host 127.0.0.1` and open it. Chec
 - the title reads "MLB Contract Calculator";
 - the Ohtani preset shows "$46.08M" and "Reported CBT $46,080,000 · Engine $46,081,476 · Δ $1,476";
 - loading Bellinger and choosing "Opts out after 2027" shows Total CBT $109.5M, Total Cash $85M and a V8 quote;
-- clearing a salary shows an error and hides results.
+- clearing a salary shows an error that names the season ("2027: …") and hides results;
+- typing a new Length only takes effect on blur or Enter;
+- the year-table rows expand with Enter.
 
 Stop the server.
 
@@ -3485,6 +3670,7 @@ interface Charge {
 }
 interface Result {
   classification: SeasonClass[];
+  playedSeasons: number[];                 // seasons actually played under the scenario (END)
   aavAtSigning: number;
   charges: Charge[];                       // every component, each with its kind and rule ids
   perSeason: { season: number; cbt: number; cash: number }[];
@@ -3520,8 +3706,14 @@ interface Result {
 - **Year table:** each season's CBT figure expands into its Charge line items, e.g. "AAV $32.5M · A1 [TEXT]" or "Valley Charge +$12.25M · V4 [TEXT] · V5 [PRACTICE] · V6 [INTERP]". A line item lists **every** rule id that determined its amount, each with its own tag. Seasons outside the playing term appear when charges land there (O7).
 - **Flags:** a callout lists every [PRACTICE]/[INTERP]/[CONV] rule the current result depends on, with a one-line explanation, its cite and the named alternative. V8 shows the quoted E(5)(d)(i) text. END is flagged only when ending the contract voids a season that would otherwise count, not when the contract simply ends at a declined final option.
 - **Presets:** a select grouped by rule family (deferred money, signing bonus, opt-outs, club options, basic). The loaded preset shows its note, "Sources" (links), and where a figure was reported, "Reported CBT: $X · Engine: $Y · Δ" (Δ rounded to whole dollars). The reconciliation is shown on purpose. Editing any term turns the preset into a custom contract, and the reconciliation disappears.
-- **Chart:** CBT charge vs cash received per calendar year, with the existing contract-end reference line.
-- Responsive and accessible per the existing Tailwind patterns. No new runtime dependencies.
+- **Chart:** CBT charge vs cash received per calendar year, with a "last season played" reference line from `Result.playedSeasons`.
+- Responsive and accessible per the existing Tailwind patterns:
+  - Year-table rows expand through a real `<button aria-expanded>`, and rule cites are visible text.
+  - Tooltips open on focus as well as hover.
+  - Errors name their season and set `aria-invalid`, not just a colour.
+  - First Season and Length commit on blur or Enter.
+  - The scenario panel stays mounted when results are hidden.
+  - No new runtime dependencies.
 
 ---
 
@@ -3614,8 +3806,8 @@ Every rule id in §2–§3 gets at least one test named with that id (e.g., `V3 
 
 - [ ] **Step 6: Verify and commit**
 
-Run: `pnpm run typecheck && pnpm test && pnpm run build && grep -rn "MLB Deferred Contract Calculator" --include='*.html' --include='*.yml' --include='*.md' --include='Dockerfile' . | grep -v node_modules | grep -v CHANGELOG.md`
-Expected: type-check exit 0, `Tests  172 passed (172)`, `✓ built in`, and **no** grep output. `CHANGELOG.md` is frozen history and keeps the old name.
+Run: `pnpm run typecheck && pnpm test && pnpm run build && grep -rn "MLB Deferred Contract Calculator" --include='*.html' --include='*.yml' --include='*.md' --include='Dockerfile' . | grep -v node_modules | grep -v CHANGELOG.md | grep -v docs/superpowers/plans/`
+Expected: type-check exit 0, `Tests  173 passed (173)`, `✓ built in`, and **no** grep output. `CHANGELOG.md` is frozen history, and the plan files quote the old name in their own commands.
 
 ```bash
 git add .github/workflows/ci.yml Dockerfile README.md CLAUDE.md docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md
@@ -3821,7 +4013,7 @@ export default defineConfig(() => {
 - [ ] **Step 4: Verify**
 
 Run: `pnpm run typecheck && pnpm test 2>&1 | tee /dev/stderr | grep -c __dirname; pnpm run build`
-Expected: type-check exit 0, `Tests  172 passed (172)`, the `__dirname` count is `0`, and the build prints `✓ built in`.
+Expected: type-check exit 0, `Tests  173 passed (173)`, the `__dirname` count is `0`, and the build prints `✓ built in`.
 
 - [ ] **Step 5: Commit, push, PR (controller)**
 
