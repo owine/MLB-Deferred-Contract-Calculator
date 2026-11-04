@@ -34,6 +34,11 @@ Every code block was generated from a prototype worktree branched from `main` at
   - Shift+Tab onto an info icon shows its tooltip.
   - The deferred column is disabled in unattributed mode.
   - Errors read "2027: …" with `aria-invalid`.
+- **Second review pass, re-checked with real input:**
+  - Tabbing through First Season and Length keeps a loaded preset (no-op commits are skipped, and `setLength` returns the same object).
+  - One click or tap opens a tooltip.
+  - Input names no longer include "More information".
+  - Length "2026" reverts, and "12" applies.
 - **Engine changes, each test-first:**
   - **F4(c) pro-rata** reproduces Cot's and the AP's Tucker figure ($57,195,945) and MLBTR's Bregman/Cubs figure ($30,893,902) to the dollar.
   - **The V11 scope fix** came from the Bichette preset. The first implementation gave him a spurious $1.2M Valley Charge; the spec text scopes V11 to the V3 floor.
@@ -1576,10 +1581,11 @@ describe('form helpers', () => {
     expect(shrunk.optOuts.map((o) => o.afterSeason)).toEqual([2027]);
   });
 
-  it('setLength ignores invalid lengths', () => {
+  it('setLength ignores invalid lengths and returns the same object when nothing changes', () => {
     const input = standard();
     expect(setLength(input, 0)).toBe(input);
     expect(setLength(input, 2.5)).toBe(input);
+    expect(setLength(input, input.seasons.length)).toBe(input);
   });
 
   it('setStartSeason shifts seasons, opt-outs and payments together', () => {
@@ -1683,7 +1689,7 @@ export function fillEvenly(input: ContractInput, total: number): ContractInput {
 /** Grow or shrink the contract to `length` seasons. New seasons copy the last season's pay as guaranteed years. */
 export function setLength(input: ContractInput, length: number): ContractInput {
   const rows = sortRows(input.seasons);
-  if (!Number.isInteger(length) || length < 1 || rows.length === 0) return input;
+  if (!Number.isInteger(length) || length < 1 || rows.length === 0 || length === rows.length) return input;
   const last = rows[rows.length - 1];
   const next =
     length <= rows.length
@@ -1808,11 +1814,14 @@ export const inputClass =
 export const errorRing = 'border-red-500 focus:ring-red-500';
 export const cardClass = 'bg-white rounded-xl shadow-sm border border-slate-200';
 
+/** Field label. The tooltip button sits beside the <label>, not inside it, so the input's accessible name stays clean. */
 export const Label: React.FC<{ text: string; tip?: string; htmlFor?: string }> = ({ text, tip, htmlFor }) => (
-  <label htmlFor={htmlFor} className="text-sm font-medium text-slate-600 mb-1 flex items-center">
-    {text}
+  <div className="mb-1 flex items-center">
+    <label htmlFor={htmlFor} className="text-sm font-medium text-slate-600">
+      {text}
+    </label>
     {tip && <InfoTooltip text={tip} />}
-  </label>
+  </div>
 );
 
 /** Dollar input: keeps the typed text while focused, shows thousands separators otherwise. Empty → NaN. */
@@ -1886,13 +1895,15 @@ export const CommitNumberInput: React.FC<{
   onCommit: (n: number) => void;
   id?: string;
   min?: number;
-}> = ({ value, onCommit, id, min }) => {
+  max?: number;
+}> = ({ value, onCommit, id, min, max }) => {
   const [draft, setDraft] = useState(String(value));
   useEffect(() => setDraft(String(value)), [value]);
   const commit = () => {
     const n = Number(draft);
-    if (draft.trim() !== '' && Number.isInteger(n) && (min === undefined || n >= min)) onCommit(n);
-    else setDraft(String(value));
+    const valid = draft.trim() !== '' && Number.isInteger(n) && (min === undefined || n >= min) && (max === undefined || n <= max);
+    if (valid && n !== value) onCommit(n); // unchanged → no edit (keeps a loaded preset loaded)
+    else if (!valid) setDraft(String(value));
   };
   return (
     <input
@@ -1900,6 +1911,7 @@ export const CommitNumberInput: React.FC<{
       type="number"
       inputMode="numeric"
       min={min}
+      max={max}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
@@ -1934,7 +1946,7 @@ export const PaymentsEditor: React.FC<{
   const [count, setCount] = useState(5);
   const [firstYear, setFirstYear] = useState(defaultYear);
   useEffect(() => setFirstYear(defaultYear), [defaultYear]); // follow the contract when its seasons move
-  const canGenerate = Number.isInteger(count) && count >= 1 && Number.isInteger(firstYear) && generateTotal !== undefined && generateTotal > 0;
+  const canGenerate = Number.isInteger(count) && count >= 1 && Number.isInteger(firstYear) && firstYear >= 1900 && generateTotal !== undefined && generateTotal > 0;
   const set = (i: number, patch: Partial<Payment>) => onChange(payments.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   return (
     <div className="space-y-2">
@@ -2081,7 +2093,7 @@ export const ContractTerms: React.FC<{ input: ContractInput; onChange: (next: Co
         </div>
         <div>
           <Label text="Length (Seasons)" htmlFor="length" />
-          <CommitNumberInput id="length" min={1} value={rows.length} onCommit={(n) => onChange(setLength(input, n))} />
+          <CommitNumberInput id="length" min={1} max={30} value={rows.length} onCommit={(n) => onChange(setLength(input, n))} />
         </div>
       </div>
 
@@ -2198,7 +2210,7 @@ export const ScheduleEditor: React.FC<{
                     <MoneyInput
                       compact
                       invalid={bad(r.season)}
-                      disabled={unattributed}
+                      disabled={unattributed && Number.isFinite(r.deferred) && r.deferred >= 0} // keep an invalid value fixable
                       value={r.deferred}
                       onChange={(deferred) => onChange(updateRow(input, r.season, { deferred }))}
                       ariaLabel={unattributed ? `${r.season} deferred (not used: deferrals are not assigned to seasons)` : `${r.season} deferred`}
@@ -2408,7 +2420,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({ text }) => {
         onMouseLeave={() => setShow(false)}
         onFocus={() => setShow(true)}
         onBlur={() => setShow(false)}
-        onClick={() => setShow((s) => !s)}
+        onClick={() => setShow(true)} // a tap opens it (mouseenter/focus already fired); blur, Escape or mouseleave close it
         onKeyDown={(e) => e.key === 'Escape' && setShow(false)}
         className="text-gray-400 hover:text-blue-500 focus:text-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-full transition-colors"
       >
@@ -3711,7 +3723,8 @@ interface Result {
   - Year-table rows expand through a real `<button aria-expanded>`, and rule cites are visible text.
   - Tooltips open on focus as well as hover.
   - Errors name their season and set `aria-invalid`, not just a colour.
-  - First Season and Length commit on blur or Enter.
+  - First Season and Length commit on blur or Enter, and only when the value changes. Length is limited to 1–30, and anything else reverts.
+  - Info tooltips open on the first tap or click and sit beside, not inside, their `<label>`.
   - The scenario panel stays mounted when results are hidden.
   - No new runtime dependencies.
 
