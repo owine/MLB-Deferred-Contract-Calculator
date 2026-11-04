@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { RULES, type Result, type SeasonClass } from '../utils/cbt';
 import { formatMoney } from '../utils/format';
-import { cardClass } from './fields';
-import { TagBadge } from './FlagsCallout';
+import { cardClass } from './styles';
+import { TagBadge } from './TagBadge';
 
 function status(c: SeasonClass | undefined, played: boolean): string {
   if (!c) return 'payout year';

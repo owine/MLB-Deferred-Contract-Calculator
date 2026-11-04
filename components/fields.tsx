@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { InfoTooltip } from './InfoTooltip';
 import { moneyInputValue, parseMoney } from '../utils/format';
-
-export const inputClass =
-  'w-full border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium bg-slate-700 text-white placeholder-slate-400';
-export const errorRing = 'border-red-500 focus:ring-red-500';
-export const cardClass = 'bg-white rounded-xl shadow-sm border border-slate-200';
+import { errorRing, inputClass } from './styles';
 
 /** Field label. The tooltip button sits beside the <label>, not inside it, so the input's accessible name stays clean. */
 export const Label: React.FC<{ text: string; tip?: string; htmlFor?: string }> = ({ text, tip, htmlFor }) => (

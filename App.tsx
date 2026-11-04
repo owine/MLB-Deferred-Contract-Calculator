@@ -3,7 +3,7 @@ import { Calculator, Info, Plus } from 'lucide-react';
 import { calculate, defaultScenario, validate, validateScenario, type ContractInput, type Result, type Scenario } from './utils/cbt';
 import { PRESETS, type Preset } from './data/presets';
 import { hasDeferral, syncScenario } from './utils/form';
-import { cardClass } from './components/fields';
+import { cardClass } from './components/styles';
 import { PresetBar } from './components/PresetBar';
 import { ContractTerms } from './components/ContractTerms';
 import { ScheduleEditor } from './components/ScheduleEditor';
