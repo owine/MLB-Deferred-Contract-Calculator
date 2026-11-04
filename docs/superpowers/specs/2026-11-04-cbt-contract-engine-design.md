@@ -1,7 +1,7 @@
 # CBT Contract Engine — Design Spec (Spec 1 of 2)
 
 **Date:** 2026-11-04 (rev. 4, after three independent CBA-verification reviews)
-**Status:** Draft — awaiting user review
+**Status:** Approved 2026-11-04
 **Scope:** Generalize the calculator from "deferred money only" to any MLB Uniform Player's Contract: year-by-year salaries, signing bonuses, club / mutual / vesting / player / dual options with buyouts, opt-outs (including the Valley Charge), earned incentives, deferrals, and Article XVI funding. Real-contract presets.
 **Follow-on (Spec 2, not designed here):** team tax bill (Actual Club Payroll, thresholds, tiered and repeat-payor rates, surcharges), with thresholds/rates stored per Contract Year as data. The 2022–2026 Basic Agreement expires December 1, 2026; 2027+ terms are unknown as of this spec.
 
@@ -338,4 +338,4 @@ Every rule id in §2–§3 gets at least one test named with that id (e.g., `V3 
 | 2026-11-04 | rev. 4 after third (final) review: V7 credits only exercised "such" years (fixes the conflict with W17); O2 non-stacking (ii) with O7 on opt-outs + W18; F1 in-term handling replaced by a scope limit (payments must fall after the maximum term); [CONV] declining an option or taking an opt-out ends the contract. **These rev. 4 edits were made after the review limit and have not been independently re-reviewed.** | Claude |
 | 2026-11-04 | V5 signed off: signing bonus attributed over pre-option Guaranteed Years for the 80% Figure, corroborated by the confirmed $48.55M 2026 total minus the $3.8M prior-contract true-up | user |
 | 2026-11-04 | Signed off as written: V7 (staying after a Valley Charge → AAV − averaged own shortfalls; Bellinger $24.33M), V9 (O7 exclusion covers V7 credits; W13 = $127.1M), D5 (Base Salary = current pay only, everywhere), A5 (higher buyout when club + player buyouts mix) | user |
-| pending | Lower-impact [INTERP] items not yet individually reviewed: A7, O2 non-stacking (i)–(ii), O4(b), O5, O8, V6 (incl. nullified share), V10, V11, X4 | user |
+| 2026-11-04 | Accepted as written: A7, O2 non-stacking (i)–(ii), O4(b), O5, O8, V6 (incl. nullified share), V10, V11, X4. **Spec approved.** | user |
