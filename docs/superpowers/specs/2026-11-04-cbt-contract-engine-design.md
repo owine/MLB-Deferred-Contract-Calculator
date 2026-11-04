@@ -126,6 +126,8 @@ No rule enters the engine without a tag. Code comments cite the same section, an
 - Earned bonus increasing a buyout (E(5)(b)(i)(C))
 - Buyouts paid in installments (a buyout is modeled as one payment at the decision)
 - Deferral or signing-bonus payments falling inside a possible option year (F1 scope limit)
+- Contracts with no Guaranteed Years (A2's "attributed in full to the first year" fallback); rejected by validation
+- Option years placed before guaranteed years (END ordering rule, §5.3)
 - Retirement-triggered deferral start and the age-40 assumption (E(6)(b)(ii))
 - Annuity arrangements (E(6)(c))
 - Loans (E(7))
@@ -246,12 +248,14 @@ interface Result {
 
 ### 5.3 Validation (blocking errors, shown inline)
 
-- At least one season, with seasons consecutive and ascending.
+- At least one season, with seasons consecutive and ascending. **At least one Guaranteed season** (A2's no-Guaranteed-Years fallback is out of scope, §2.8).
 - `currentSalary ≥ 0` and `deferred ≥ 0` for every season.
-- Every deferral payment year, and every signing-bonus installment after the last Guaranteed season, falls after the last season of the maximum term (F1 scope limit). In sequential mode at 0% stated interest, Σ payments = Σ `deferred`; any other difference is a warning showing the amount. Unattributed mode requires `unattributedPrincipal`.
+- **Ordering (END [CONV]):** no `guaranteed` row may follow an option row, because declining an option ends the contract and would otherwise void a Guaranteed Year. The season right after an opt-out must be a `guaranteed` row (Y4).
+- Every deferral payment year, and every signing-bonus installment after the last Guaranteed season, falls after the last season of the maximum term (F1 scope limit).
+- **F7 consistency:** at 0% stated interest, Σ payments must equal the principal: Σ `deferred` in sequential mode, `unattributedPrincipal` in unattributed mode. This is an error. With stated interest, a mismatch is a warning showing the amount. Unattributed mode requires `unattributedPrincipal`.
 - `buyout` only on option rows. `guaranteedIfExercised` only on player/dual rows. Each `optOut.afterSeason` has at least one season after it.
 - Signing-bonus payments sum to the bonus amount. Payments after the actual last season are classified automatically as A7 (no input flag).
-- ILIR is in (0, 25]. Stated interest is ≥ 0.
+- ILIR is in (0, 25] **when the contract has deferred compensation** (deferral payments, deferred principal, or an A7 installment). Otherwise it is unused and may be 0. Stated interest is ≥ 0.
 
 ---
 

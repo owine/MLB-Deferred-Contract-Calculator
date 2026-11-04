@@ -19,13 +19,18 @@
 Every code block below was generated from a prototype worktree, not retyped. In that prototype:
 
 - `pnpm add -D vitest@5.0.5` installed with no build scripts. The repo's `ignore-scripts=true` and empty `allowBuilds` needed no change.
-- `pnpm exec vitest run` passed **87 tests in 10 files**.
+- `pnpm test` passed **101 tests in 10 files**. The plan's literal `pnpm test`, `pnpm run typecheck:engine` and `pnpm run build` commands were run with the scripts in place.
 - `pnpm exec tsc --noEmit -p tsconfig.engine.json` (strict) reported **0 errors**, and a planted type error made it fail.
 - `pnpm run build` succeeded.
 - **Mutation checks:**
   - Removing the O2NS guard fails W18.
   - Using the A2 signing-bonus attribution in place of V5 fails all four Bellinger tests.
   - Making the F6 band exclusive fails F6.
+- **Independent plan review.**
+  - A reviewer diffed all 25 code blocks against the prototype: byte-identical.
+  - Their separate fuzz run of 6,388 scenarios found no invariant violations.
+  - Their findings are folded in: flags, rule metadata, F7 blocking at 0%, named tests per rule id, and spec deviations recorded.
+  - The wider invariant generator they recommended then found one real gap: a guaranteed year placed after an option year is voided when the option is declined. That is now a validation error (END ordering, spec §5.3).
 
 If any step's actual output differs from the expected output given here, stop and investigate. Don't edit a test to make it pass.
 
@@ -63,12 +68,12 @@ If any step's actual output differs from the expected output given here, stop an
 
 The spec branch `docs/cbt-contract-engine-spec` already exists with the approved spec committed.
 
-- [ ] **Step 1:** Commit this plan on that branch.
+- [ ] **Step 1:** This plan is already committed on that branch. Commit any later revisions to it or to the spec. If `git status` is clean, skip the commit.
 
 ```bash
 git checkout docs/cbt-contract-engine-spec
-git add docs/superpowers/plans/2026-11-04-cbt-engine-plan-a.md
-git commit -m "docs: add CBT engine implementation plan A"
+git status --short docs/   # empty → nothing to commit
+git add docs/ && git commit -m "docs: revise CBT engine spec and plan A"   # only if the line above printed changes
 ```
 
 - [ ] **Step 2:** Push and open the PR. Wait for checks (and the Sourcery review, if it posts) before merging.
@@ -225,66 +230,140 @@ git checkout main && git pull --ff-only && git checkout -b refactor/cbt-engine
 - [ ] **Step 2: Create `utils/cbt/rules.ts`**
 
 ```ts
-// Single source of truth for rule ids, CBA citations and evidence tags.
-// Every id here must match a row in the spec (§2–§3). Tags:
+// Single source of truth for rule ids, CBA citations and evidence tags (spec §1, §5).
+// Every id here matches a row in the spec (§2–§3). Tags:
 //   TEXT     — stated directly in the CBA
 //   PRACTICE — CBA ambiguous/silent; matches the figure MLB actually charged
-//   INTERP   — CBA ambiguous; engine's reading (alternative named in the spec)
+//   INTERP   — CBA ambiguous; engine's reading (`alternative` names the other reading)
 //   CONV     — CBA silent; modeling convention
+// Pages are the printed pages of the 2022–2026 Basic Agreement.
 export type Tag = 'TEXT' | 'PRACTICE' | 'INTERP' | 'CONV';
 
 export interface Rule {
   cite: string;
   tag: Tag;
   summary: string;
+  alternative?: string;
 }
 
 export const RULES = {
-  D2: { cite: 'XXIII(A)(4); E(6)(b)(ii)', tag: 'TEXT', summary: 'ILIR = Federal mid-term rate for the October before the first Contract Year' },
-  D4: { cite: 'XXIII(A)(8)', tag: 'TEXT', summary: 'Guaranteed Year: >50% of Base Salary guaranteed on termination' },
-  D5: { cite: 'E(2); E(5)(d)(ii)', tag: 'INTERP', summary: 'Base Salary = current (non-deferred) pay; deferrals enter only via E(6)' },
-  Y1: { cite: 'E(5)(a)(i)', tag: 'TEXT', summary: 'Club (incl. vesting) option years are not Guaranteed Years' },
-  Y2: { cite: 'E(5)(a)(ii)', tag: 'TEXT', summary: 'Player option year is guaranteed unless buyout > 50% of Base Salary' },
-  Y3: { cite: 'E(5)(a)(ii)', tag: 'TEXT', summary: 'Years after an opt-out are guaranteed unless payment > 50% of following Base Salaries' },
-  Y4: { cite: 'E(5)(a)(ii)(B)', tag: 'TEXT', summary: 'Guaranteed seasons after an opt-out are Player Option Years' },
-  Y5: { cite: 'E(5)(a)(iii)', tag: 'TEXT', summary: 'Dual option = Player Option Year' },
-  Y6: { cite: 'E(5)(a)(iv)', tag: 'TEXT', summary: 'Mutual option = Club Option Year' },
-  A1: { cite: 'E(2)', tag: 'TEXT', summary: 'AAV = (Base Salary + Signing Bonus + deferred cost) / Guaranteed Years' },
-  A2: { cite: 'E(3)', tag: 'TEXT', summary: 'Signing Bonus attributed pro rata over Guaranteed Years' },
-  A3: { cite: 'E(5)(b)(i)(A)', tag: 'TEXT', summary: 'Buyout on a non-guaranteed option year is deemed a Signing Bonus' },
-  A4: { cite: 'E(5)(b)(i)(B)', tag: 'TEXT', summary: 'Only the earliest option year buyout is deemed a Signing Bonus' },
-  A5: { cite: 'E(5)(b)(i)(A)-(B)', tag: 'INTERP', summary: 'Club + player buyouts both present: the higher is the Signing Bonus' },
-  A7: { cite: 'E(1); E(3); E(6)(a)', tag: 'INTERP', summary: 'Signing-bonus installments after the term are discounted as deferred compensation' },
-  F1: { cite: 'E(6)(a)', tag: 'TEXT', summary: 'Deferred Compensation = Salary payable after the last season' },
-  F2: { cite: 'E(6)(b)(i)', tag: 'TEXT', summary: 'Deferred comp counts in the season the contract attributes it to' },
-  F3: { cite: 'E(6)(b)(ii)', tag: 'TEXT', summary: 'Stated interest within 1.5 pp of ILIR → stated value; else discounted at ILIR' },
-  F4a: { cite: 'E(6)(b)(i)', tag: 'PRACTICE', summary: 'Sequential attribution: first-earned principal paid first' },
-  F4b: { cite: 'E(6)(b)(i)', tag: 'TEXT', summary: 'Unattributed: equally to each Guaranteed Year' },
+  D1: { cite: 'XXIII(A)(1), p.115–116', tag: 'TEXT', summary: 'Contract Year runs Dec 2 – Dec 1, named for its championship season' },
+  D2: { cite: 'XXIII(A)(4), p.116; E(6)(b)(ii), p.136–137', tag: 'TEXT', summary: 'ILIR = Federal mid-term rate for the October before the first Contract Year' },
+  D3: { cite: 'XXIII(A)(7), p.116', tag: 'TEXT', summary: 'Base Salary = the UPC ¶2 amount for a season' },
+  D4: { cite: 'XXIII(A)(8), p.116', tag: 'TEXT', summary: 'Guaranteed Year: >50% of Base Salary guaranteed on termination' },
+  D5: {
+    cite: 'E(2), p.131; E(5)(d)(ii), p.136',
+    tag: 'INTERP',
+    summary: 'Base Salary = current (non-deferred) pay; deferrals enter only via E(6)',
+    alternative: 'Base Salary includes nominal deferred pay (changes the 50% guarantee tests)',
+  },
+  Y1: { cite: 'E(5)(a)(i), p.133', tag: 'TEXT', summary: 'Club (incl. vesting) option years are not Guaranteed Years' },
+  Y2: { cite: 'E(5)(a)(ii), p.133', tag: 'TEXT', summary: 'Player option year is guaranteed unless buyout > 50% of Base Salary' },
+  Y3: { cite: 'E(5)(a)(ii), p.133', tag: 'TEXT', summary: 'Years after an opt-out are guaranteed unless payment > 50% of following Base Salaries' },
+  Y4: { cite: 'E(5)(a)(ii)(B), p.133', tag: 'TEXT', summary: 'Guaranteed seasons after an opt-out are Player Option Years' },
+  Y5: { cite: 'E(5)(a)(iii), p.133', tag: 'TEXT', summary: 'Dual option = Player Option Year' },
+  Y6: { cite: 'E(5)(a)(iv), p.133–134', tag: 'TEXT', summary: 'Mutual option = Club Option Year' },
+  A1: { cite: 'E(2), p.131', tag: 'TEXT', summary: 'AAV = (Base Salary + Signing Bonus + deferred cost) / Guaranteed Years' },
+  A2: { cite: 'E(3), p.132', tag: 'TEXT', summary: 'Signing Bonus attributed pro rata over Guaranteed Years' },
+  A3: { cite: 'E(5)(b)(i)(A), p.134', tag: 'TEXT', summary: 'Buyout on a non-guaranteed option year is deemed a Signing Bonus' },
+  A4: { cite: 'E(5)(b)(i)(B), p.134', tag: 'TEXT', summary: 'Only the earliest option year buyout is deemed a Signing Bonus' },
+  A5: {
+    cite: 'E(5)(b)(i)(A)–(B), p.134',
+    tag: 'INTERP',
+    summary: 'Club + player buyouts both present: the higher is the Signing Bonus',
+    alternative: 'Always use the earliest option year buyout (B)',
+  },
+  A6: { cite: 'E(4)(a), p.132', tag: 'TEXT', summary: 'Potential (unearned) bonuses are not in the AAV' },
+  A7: {
+    cite: 'E(1), p.131; E(3), p.132; E(6)(a), p.136',
+    tag: 'INTERP',
+    summary: 'Signing-bonus installments after the term are discounted as deferred compensation',
+    alternative: 'Signing bonuses are never discounted',
+  },
+  F1: { cite: 'E(6)(a), p.136', tag: 'TEXT', summary: 'Deferred Compensation = Salary payable after the last season' },
+  F2: { cite: 'E(6)(b)(i), p.136', tag: 'TEXT', summary: 'Deferred comp counts in the season the contract attributes it to' },
+  F3: { cite: 'E(6)(b)(ii), p.136–137', tag: 'TEXT', summary: 'Stated interest within 1.5 pp of ILIR → stated value; else discounted at ILIR' },
+  F4a: { cite: 'E(6)(b)(i), p.136', tag: 'PRACTICE', summary: 'Sequential attribution: first-earned principal paid first' },
+  F4b: { cite: 'E(6)(b)(i), p.136', tag: 'TEXT', summary: 'Unattributed: equally to each Guaranteed Year (payment split is a convention)' },
   F5: { cite: 'silent', tag: 'PRACTICE', summary: 'Whole-year, annually compounded discounting' },
   F6: { cite: 'silent', tag: 'CONV', summary: '"Within 1.5 percentage points" is inclusive' },
-  F7: { cite: 'E(6)(b)(ii)', tag: 'CONV', summary: 'Payments are cash incl. interest; principal = cash / (1+stated)^years' },
-  B1: { cite: 'E(4)(a)', tag: 'TEXT', summary: 'Earned bonuses count in the season earned, outside the AAV' },
-  O1: { cite: 'E(5)(c)', tag: 'TEXT', summary: 'Exercised club option year = Base Salary + bonuses' },
-  O2: { cite: 'E(5)(b)(ii)', tag: 'TEXT', summary: 'Buyout not received → deduction of the buyout previously included' },
-  O2NS: { cite: 'E(5)(b)(ii)', tag: 'INTERP', summary: 'O2 not stacked on O6 or on an O7 true-up' },
-  O3: { cite: 'E(5)(b)(i)', tag: 'TEXT', summary: 'Declined; deemed buyout already charged' },
-  O4: { cite: 'E(5)(b)(i)(B)', tag: 'TEXT', summary: 'Paid buyout that was not the deemed Signing Bonus is charged in its option year' },
-  O4b: { cite: 'E(5)(b)(i)(B)', tag: 'INTERP', summary: 'O4 extended to the lower buyout left out under A5' },
-  O5: { cite: 'E(5)(a)(i), (c)', tag: 'INTERP', summary: 'Vested option treated as exercised club option' },
-  O6: { cite: 'E(5)(d)(i) ¶2', tag: 'TEXT', summary: 'Exercised non-guaranteed player option: salary − buyout attributed' },
-  O7: { cite: 'E(5)(d)(i) ¶1', tag: 'TEXT', summary: 'Nullified guaranteed player option: true-up of paid − attributed (excl. Valley)' },
-  O8: { cite: 'E(5)(d)(i); E(6)(b)(i)', tag: 'INTERP', summary: 'O7 values deferred pay at attributed cost' },
-  V4: { cite: 'E(5)(d)(ii)', tag: 'TEXT', summary: 'Valley shortfall allocated pro rata over preceding Guaranteed Years' },
-  V5: { cite: 'E(5)(d)(ii)', tag: 'PRACTICE', summary: 'Signing Bonus attributed over pre-option years for the 80% Figure' },
-  V6: { cite: 'E(5)(d)(ii)', tag: 'INTERP', summary: '"Such" resolved by testing option years in order; shares stay charged' },
-  V7: { cite: 'E(5)(d)(ii)', tag: 'INTERP', summary: 'Exercised "such" years credited their averaged shortfalls' },
-  V8: { cite: 'E(5)(d)(i) ¶1', tag: 'TEXT', summary: 'Valley Charge not refunded on opt-out' },
-  V9: { cite: 'E(5)(d)(i) ¶1', tag: 'INTERP', summary: 'O7 exclusion also covers V7 credits' },
-  V10: { cite: 'E(5)(d)(ii); G(3)(e)', tag: 'INTERP', summary: 'Valley applies only to guaranteed player option years' },
-  V11: { cite: 'E(5)(d)(ii); E(5)(b)(i)(A)', tag: 'INTERP', summary: 'In the floor hypothetical, option-year buyouts become deemed Signing Bonus' },
-  X1: { cite: 'Art. XVI', tag: 'TEXT', summary: 'Fund by the second July 1 after the season earned' },
-  X2: { cite: 'Art. XVI', tag: 'TEXT', summary: 'Maintain PV of outstanding payments at 5%' },
-  X4: { cite: 'Art. XVI; XXIII(A)', tag: 'INTERP', summary: '"Earned" season = Art. XXIII attributed season' },
+  F7: { cite: 'E(6)(b)(ii), p.136–137', tag: 'CONV', summary: 'Payments are cash incl. interest; principal = cash / (1+stated)^years' },
+  B1: { cite: 'E(4)(a), p.132', tag: 'TEXT', summary: 'Earned bonuses count in the season earned, outside the AAV' },
+  O1: { cite: 'E(5)(c), p.135', tag: 'TEXT', summary: 'Exercised club option year = Base Salary + bonuses' },
+  O2: { cite: 'E(5)(b)(ii), p.134–135', tag: 'TEXT', summary: 'Buyout not received → deduction of the buyout previously included' },
+  O2NS: {
+    cite: 'E(5)(b)(ii), p.134–135',
+    tag: 'INTERP',
+    summary: 'O2 not stacked on O6 or on an O7 true-up',
+    alternative: 'Apply O2 as well (deducts the buyout twice)',
+  },
+  O3: { cite: 'E(5)(b)(i), p.134', tag: 'TEXT', summary: 'Declined; deemed buyout already charged' },
+  O4: { cite: 'E(5)(b)(i)(B), p.134', tag: 'TEXT', summary: 'Paid buyout that was not the deemed Signing Bonus is charged in its option year' },
+  O4b: {
+    cite: 'E(5)(b)(i)(B), p.134',
+    tag: 'INTERP',
+    summary: 'O4 extended to the lower buyout left out under A5',
+    alternative: 'The text covers only non-earliest option years',
+  },
+  O5: {
+    cite: 'E(5)(a)(i), (c), p.133, 135',
+    tag: 'INTERP',
+    summary: 'Vested option treated as exercised club option',
+    alternative: 'Vesting is not "exercise"; no rule given',
+  },
+  O6: { cite: 'E(5)(d)(i) ¶2, p.135', tag: 'TEXT', summary: 'Exercised non-guaranteed player option: salary − buyout attributed' },
+  O7: { cite: 'E(5)(d)(i) ¶1, p.135', tag: 'TEXT', summary: 'Nullified guaranteed player option: true-up of paid − attributed (excl. Valley)' },
+  O8: {
+    cite: 'E(5)(d)(i), p.135; E(6)(b)(i), p.136',
+    tag: 'INTERP',
+    summary: 'O7 values deferred pay at attributed cost',
+    alternative: 'Value deferred pay at nominal (adds the discount back)',
+  },
+  V1: { cite: 'E(5)(d)(ii), p.136', tag: 'TEXT', summary: 'Player Option Year Value = Base Salary + deferred cost − buyout' },
+  V2: { cite: 'E(5)(d)(ii), p.136', tag: 'TEXT', summary: '80% Figure from the smallest preceding Guaranteed Year' },
+  V3: { cite: 'E(5)(d)(ii), p.136', tag: 'TEXT', summary: 'Floor: 75% of AAV as if the option year were not guaranteed' },
+  V4: { cite: 'E(5)(d)(ii), p.136', tag: 'TEXT', summary: 'Valley shortfall allocated pro rata over preceding Guaranteed Years' },
+  V5: { cite: 'E(5)(d)(ii), p.136', tag: 'PRACTICE', summary: 'Signing Bonus attributed over pre-option years for the 80% Figure' },
+  V6: {
+    cite: 'E(5)(d)(ii), p.136',
+    tag: 'INTERP',
+    summary: '"Such" resolved by testing option years in order; shares stay charged',
+    alternative: 'Shares on a later-nullified year are dropped',
+  },
+  V7: {
+    cite: 'E(5)(d)(ii), p.136',
+    tag: 'INTERP',
+    summary: 'Exercised "such" years credited their averaged shortfalls',
+    alternative: 'Recompute AAV over option years only (Bellinger $17.67M)',
+  },
+  V8: { cite: 'E(5)(d)(i) ¶1, p.135', tag: 'TEXT', summary: 'Valley Charge not refunded on opt-out' },
+  V9: {
+    cite: 'E(5)(d)(i) ¶1, p.135',
+    tag: 'INTERP',
+    summary: 'O7 exclusion also covers V7 credits',
+    alternative: 'Count V7 credits as attributed (Bellinger W13 $135.3M)',
+  },
+  V10: {
+    cite: 'E(5)(d)(ii), p.136; G(3)(e), p.143',
+    tag: 'INTERP',
+    summary: 'Valley applies only to guaranteed player option years',
+    alternative: 'Apply to all player option years',
+  },
+  V11: {
+    cite: 'E(5)(d)(ii), p.136; E(5)(b)(i)(A), p.134',
+    tag: 'INTERP',
+    summary: 'In the floor hypothetical, option-year buyouts become deemed Signing Bonus',
+    alternative: 'Ignore buyouts in the hypothetical',
+  },
+  X1: { cite: 'Art. XVI, p.89', tag: 'TEXT', summary: 'Fund by the second July 1 after the season earned' },
+  X2: { cite: 'Art. XVI, p.89', tag: 'TEXT', summary: 'Maintain PV of outstanding payments at 5%' },
+  X3: { cite: 'Art. XVI, p.89', tag: 'TEXT', summary: '5% may change only by agreement after a prime rate ≥ 7%' },
+  X4: {
+    cite: 'Art. XVI, p.89; XXIII(A), p.115',
+    tag: 'INTERP',
+    summary: '"Earned" season = Art. XXIII attributed season',
+    alternative: 'Art. XVI "earned" defined independently',
+  },
   X5: { cite: '—', tag: 'CONV', summary: 'July 1 snapshots, whole years; same-day payments count as paid' },
   END: { cite: '—', tag: 'CONV', summary: 'Declining an option or taking an opt-out ends the contract' },
 } as const satisfies Record<string, Rule>;
@@ -481,7 +560,18 @@ import { build, guaranteed, Y1 } from './helpers';
 
 const at = (input: ReturnType<typeof build>, n: number) => classify(input).find((c) => c.season === Y1 + n - 1)!;
 
-describe('classify (D4, Y1–Y6)', () => {
+describe('classify (D1, D3–D5, Y1–Y6)', () => {
+  it('D1 seasons are identified by the calendar year of the championship season, in order', () => {
+    const input = build(guaranteed(3, 20));
+    input.seasons.reverse();
+    expect(classify(input).map((c) => c.season)).toEqual([Y1, Y1 + 1, Y1 + 2]);
+  });
+
+  it('D3/D5 the 50% test reads current pay only: $0 current salary + any buyout → not guaranteed', () => {
+    const input = build([...guaranteed(1, 20), { currentSalary: 0, deferred: 35, kind: 'player', buyout: 1 }]);
+    expect(at(input, 2).isGuaranteed).toBe(false);
+  });
+
   it('D4 guaranteed rows are Guaranteed Years', () => {
     expect(at(build(guaranteed(2, 20)), 1)).toMatchObject({ effectiveKind: 'guaranteed', isGuaranteed: true });
   });
@@ -596,7 +686,7 @@ export function isOptionRow(c: SeasonClass): boolean {
 - [ ] **Step 5: Run it to confirm it passes**
 
 Run: `pnpm exec vitest run utils/cbt/__tests__/classify.test.ts && pnpm run typecheck:engine`
-Expected: `Tests  9 passed (9)`; type-check exit 0.
+Expected: `Tests  11 passed (11)`; type-check exit 0.
 
 - [ ] **Step 6: Commit**
 
@@ -1059,9 +1149,9 @@ export interface ValleyResult {
   shortfalls: Map<number, number>;
   /** V4 allocation per Guaranteed Year preceding the first such year. */
   allocation: Map<number, number>;
+  /** True when V11 (buyouts deemed Signing Bonus inside the hypothetical) changed an evaluated figure. */
+  usedV11: boolean;
 }
-
-const NONE: ValleyResult = { firstSuch: null, figure: 0, shortfalls: new Map(), allocation: new Map() };
 
 export function computeValley(
   input: ContractInput,
@@ -1075,6 +1165,8 @@ export function computeValley(
   const po = classes.filter((c) => c.effectiveKind === 'player' && c.isGuaranteed);
   // V1: Base Salary (D5) + deferred cost − Option Buyout.
   const value = (c: SeasonClass) => rows.get(c.season)!.currentSalary + cost(c.season) - c.buyout;
+  const actualBuyout = selectDeemedBuyout(classes).amount;
+  let usedV11 = false;
 
   for (let k = 0; k < po.length; k++) {
     const candidate = po[k];
@@ -1084,7 +1176,9 @@ export function computeValley(
     const hypG = hyp.filter((c) => c.isGuaranteed);
     const priorG = hypG.filter((c) => c.season < candidate.season);
     if (priorG.length === 0) continue;
-    const signingBonus = bonusCost + selectDeemedBuyout(hyp).amount; // V11
+    const hypBuyout = selectDeemedBuyout(hyp).amount; // V11
+    if (hypBuyout !== actualBuyout) usedV11 = true;
+    const signingBonus = bonusCost + hypBuyout;
     const hypAav =
       (hypG.reduce((s, c) => s + rows.get(c.season)!.currentSalary + cost(c.season), 0) + signingBonus) / hypG.length;
     // V2 with V5: Signing Bonus attributed over the Guaranteed Years before the candidate.
@@ -1098,9 +1192,9 @@ export function computeValley(
     for (const c of po.slice(k)) if (value(c) < figure) shortfalls.set(c.season, figure - value(c));
     const total = [...shortfalls.values()].reduce((s, v) => s + v, 0);
     const allocation = new Map(priorG.map((c) => [c.season, total / priorG.length] as [number, number]));
-    return { firstSuch: candidate.season, figure, shortfalls, allocation };
+    return { firstSuch: candidate.season, figure, shortfalls, allocation, usedV11 };
   }
-  return NONE;
+  return { firstSuch: null, figure: 0, shortfalls: new Map(), allocation: new Map(), usedV11 };
 }
 ```
 
@@ -1128,10 +1222,12 @@ git commit -m "refactor: compute the Valley Charge per E(5)(d)(ii)"
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { computeFunding } from '../funding';
+import { computeFunding, FUNDING_RATE_PCT } from '../funding';
 
 describe('Article XVI funding (X1, X2, X5)', () => {
-  it('W10: 10 earned in 2024, paid 2030', () => {
+  it('X3 the funding discount rate is 5%', () => expect(FUNDING_RATE_PCT).toBe(5));
+
+  it('W10 X1/X4/X5: 10 earned in 2024, paid 2030', () => {
     const f = computeFunding([{ season: 2024, year: 2030, cash: 10, cost: 0 }]);
     expect(f.snapshots.map((s) => s.july1)).toEqual([2026, 2027, 2028, 2029, 2030]);
     const req = f.snapshots.map((s) => s.required);
@@ -1183,7 +1279,7 @@ export function computeFunding(pieces: Piece[]): { snapshots: { july1: number; r
 - [ ] **Step 4: Run it to confirm it passes**
 
 Run: `pnpm exec vitest run utils/cbt/__tests__/funding.test.ts && pnpm run typecheck:engine`
-Expected: `Tests  2 passed (2)`; type-check exit 0.
+Expected: `Tests  3 passed (3)`; type-check exit 0.
 
 - [ ] **Step 5: Commit**
 
@@ -1245,12 +1341,42 @@ describe('validate (§5.3)', () => {
     expect(errors(input).some((e) => e.rule === 'D2')).toBe(true);
   });
 
-  it('F7: warns when sequential payments do not match the deferred principal', () => {
+  it('F7: at 0% interest, sequential payments that do not match the principal are an error', () => {
     const input = build([{ currentSalary: 5, deferred: 5 }], {
       ilirPct: 4,
       deferral: { payments: [{ year: 2030, amount: 4 }], attribution: 'sequential', statedInterestPct: 0 },
     });
+    expect(validate(input)).toEqual([expect.objectContaining({ severity: 'error', rule: 'F7' })]);
+  });
+
+  it('F7: with stated interest, a mismatch is only a warning', () => {
+    const input = build([{ currentSalary: 5, deferred: 5 }], {
+      ilirPct: 6,
+      deferral: { payments: [{ year: 2030, amount: 4 }], attribution: 'sequential', statedInterestPct: 3 },
+    });
     expect(validate(input)).toEqual([expect.objectContaining({ severity: 'warning', rule: 'F7' })]);
+  });
+
+  it('F7: unattributed mode at 0% requires payments to equal the principal', () => {
+    const input = build(guaranteed(2, 5), {
+      ilirPct: 4,
+      deferral: { payments: [{ year: 2030, amount: 10 }], attribution: 'unattributed', statedInterestPct: 0, unattributedPrincipal: 6 },
+    });
+    expect(errors(input).some((e) => e.rule === 'F7')).toBe(true);
+  });
+
+  it('Y4: the season right after an opt-out must be a guaranteed row', () => {
+    const input = build([...guaranteed(2, 20), { currentSalary: 25, kind: 'club' }], { optOuts: [{ afterSeason: Y1 + 1, payment: 0 }] });
+    expect(errors(input).some((e) => e.rule === 'Y4')).toBe(true);
+  });
+
+  it('END: a guaranteed row may not follow an option row', () => {
+    const input = build([{ currentSalary: 20 }, { currentSalary: 15, kind: 'player', buyout: 14 }, { currentSalary: 20 }]);
+    expect(errors(input).some((e) => e.rule === 'END')).toBe(true);
+  });
+
+  it('D2: ILIR is not required without deferred compensation', () => {
+    expect(validate(build(guaranteed(2, 20), { ilirPct: 0 }))).toEqual([]);
   });
 
   it('F4b: unattributed mode requires the total principal', () => {
@@ -1304,11 +1430,18 @@ export function validate(input: ContractInput): ValidationIssue[] {
       err(`seasons.${r.season}.guaranteedIfExercised`, 'Only player or dual option years use this setting.', 'Y2');
   });
 
+  // END [CONV]: declining an option ends the contract, so no guaranteed row may follow an option row.
+  const firstOption = rows.find((r) => OPTION_KINDS.has(r.kind));
+  if (firstOption && rows.some((r) => r.season > firstOption.season && r.kind === 'guaranteed'))
+    err('seasons', `Guaranteed seasons must come before the first option year (${firstOption.season}).`, 'END');
+
   const first = rows[0].season;
   const last = rows[rows.length - 1].season; // last season of the maximum term
   for (const o of input.optOuts) {
     if (o.afterSeason < first || o.afterSeason >= last) err('optOuts', `Opt-out after ${o.afterSeason} must be followed by at least one season.`, 'Y3');
     if (o.payment < 0) err('optOuts', 'Opt-out payment cannot be negative.', 'Y3');
+    const next = rows.find((r) => r.season === o.afterSeason + 1);
+    if (next && next.kind !== 'guaranteed') err('optOuts', `The season after an opt-out (${next.season}) must be a guaranteed row.`, 'Y4');
   }
 
   const classes = classify(input);
@@ -1333,18 +1466,21 @@ export function validate(input: ContractInput): ValidationIssue[] {
   if ((hasDeferral || hasA7) && !(input.ilirPct > 0 && input.ilirPct <= 25)) err('ilirPct', 'Enter the Imputed Loan Interest Rate (0–25%).', 'D2');
   if (input.deferral.statedInterestPct < 0) err('deferral.statedInterestPct', 'Stated interest cannot be negative.', 'F3');
 
+  // F7: at 0% stated interest, payments must equal the principal (blocking). With interest, a mismatch only warns.
+  const zeroInterest = input.deferral.statedInterestPct === 0;
+  const mismatch = (message: string) =>
+    issues.push({ severity: zeroInterest ? 'error' : 'warning', field: 'deferral.payments', message, rule: 'F7' });
+  const paymentTotal = input.deferral.payments.reduce((s, p) => s + p.amount, 0);
   if (input.deferral.attribution === 'unattributed') {
-    if (input.deferral.payments.length > 0 && !((input.deferral.unattributedPrincipal ?? 0) > 0))
+    const principal = input.deferral.unattributedPrincipal ?? 0;
+    if (input.deferral.payments.length > 0 && !(principal > 0))
       err('deferral.unattributedPrincipal', 'Enter the total deferred principal.', 'F4b');
+    else if (zeroInterest && Math.abs(paymentTotal - principal) > 0.5)
+      mismatch(`Payments (${Math.round(paymentTotal)}) must equal the deferred principal (${Math.round(principal)}) at 0% interest.`);
   } else if (input.deferral.payments.length > 0) {
     const d = deferralCosts(input, classes);
     if (d.unpaidPrincipal > 0.5 || d.excessCash > 0.5)
-      issues.push({
-        severity: 'warning',
-        field: 'deferral.payments',
-        message: `Payments don't match the deferred principal (unpaid principal ${Math.round(d.unpaidPrincipal)}, excess cash ${Math.round(d.excessCash)}).`,
-        rule: 'F7',
-      });
+      mismatch(`Payments don't match the deferred principal (unpaid principal ${Math.round(d.unpaidPrincipal)}, excess cash ${Math.round(d.excessCash)}).`);
   }
   return issues;
 }
@@ -1353,7 +1489,7 @@ export function validate(input: ContractInput): ValidationIssue[] {
 - [ ] **Step 4: Run it to confirm it passes**
 
 Run: `pnpm exec vitest run utils/cbt/__tests__/validate.test.ts && pnpm run typecheck:engine`
-Expected: `Tests  9 passed (9)`; type-check exit 0.
+Expected: `Tests  14 passed (14)`; type-check exit 0.
 
 - [ ] **Step 5: Commit**
 
@@ -1442,11 +1578,12 @@ describe('worked examples', () => {
       close(yr(r, 4), 14);
       close(r.totals.cbt, 72);
     });
-    it('declined: +6 true-up in yr 4; total 64 vs cash 60', () => {
+    it('declined: +6 true-up in yr 4; total 64 vs cash 60; O8 not flagged without deferrals', () => {
       const r = run(input, { options: { [Y1 + 3]: 'declined' } });
       close(yr(r, 4), 6);
       close(r.totals.cbt, 64);
       close(r.totals.cash, 60);
+      expect(r.flags.map((f) => f.rule)).not.toContain('O8');
     });
   });
 
@@ -1496,14 +1633,14 @@ describe('worked examples', () => {
       close(r.totals.cbt, 108);
       close(r.totals.cash, 108);
     });
-    it('yr 5 declined ends the contract: total 82', () => {
+    it('END: yr 5 declined ends the contract: total 82', () => {
       const r = run(input, { options: { [Y1 + 4]: 'declined' } });
       close(r.totals.cbt, 82);
       close(r.totals.cash, 82);
     });
   });
 
-  it('W9 B1: 0.5 earned in yr 2', () => {
+  it('W9 B1/A6: 0.5 earned in yr 2 is outside the AAV', () => {
     const r = run(build(guaranteed(5, 20)), { earnedBonuses: { [Y1 + 1]: 0.5 } });
     close(r.aavAtSigning, 20);
     close(yr(r, 2), 20.5);
@@ -1531,7 +1668,7 @@ describe('worked examples', () => {
       close(r.totals.cash, 85);
       expect(r.flags.map((f) => f.rule)).toContain('V8');
     });
-    it('W13 opt-out after yr 3: yr 3 = 24.3; true-up 13.3 over yrs 4–5; total 127.1', () => {
+    it('W13 V7/V9 opt-out after yr 3: yr 3 = 24.3; true-up 13.3 over yrs 4–5; total 127.1', () => {
       const r = run(input, { optOutTakenAfter: Y1 + 2 });
       close(yr(r, 3), 24.3);
       close(yr(r, 4), 6.65);
@@ -1595,12 +1732,15 @@ describe('worked examples', () => {
       close(r.aavAtSigning, 21);
       close(yr(r, 1), 21);
     });
-    it('opt-out taken: yr 3 = −2 (O7), no O2 in yr 4; 40 = cash', () => {
+    it('opt-out taken: yr 3 = −2 (O7), no O2 in yr 4; 40 = cash; O2NS and END flagged, O8 not', () => {
       const r = run(input, { optOutTakenAfter: Y1 + 1 });
       close(yr(r, 3), -2);
       close(yr(r, 4), 0);
       close(r.totals.cbt, 40);
       close(r.totals.cash, 40);
+      const flagged = r.flags.map((f) => f.rule);
+      expect(flagged).toEqual(expect.arrayContaining(['O2NS', 'END']));
+      expect(flagged).not.toContain('O8');
     });
     it('stays, option declined: 63 = cash', () => {
       const r = run(input);
@@ -1613,6 +1753,49 @@ describe('worked examples', () => {
       close(r.totals.cbt, 85);
       close(r.totals.cash, 85);
     });
+  });
+
+  it('F2 an option year’s deferral counts only if the option is exercised', () => {
+    const input = build([...guaranteed(1, 10), { currentSalary: 5, deferred: 5, kind: 'club' }], {
+      ilirPct: 5,
+      deferral: { payments: [{ year: Y1 + 4, amount: 5 }], attribution: 'sequential', statedInterestPct: 0 },
+    });
+    const ex = run(input, { options: { [Y1 + 1]: 'exercised' } });
+    close(yr(ex, 2), 5 + 5 / 1.05 ** 3);
+    close(ex.totals.cash, 20);
+    const dec = run(input);
+    close(yr(dec, 2), 0);
+    close(dec.totals.cash, 10);
+  });
+
+  it('O8 opt-out true-up values deferred pay at attributed cost', () => {
+    const input = build([{ currentSalary: 10, deferred: 10 }, { currentSalary: 20 }], {
+      ilirPct: 5,
+      optOuts: [{ afterSeason: Y1, payment: 0 }],
+      deferral: { payments: [{ year: Y1 + 3, amount: 10 }], attribution: 'sequential', statedInterestPct: 0 },
+    });
+    const pv = 10 / 1.05 ** 3;
+    const r = run(input, { optOutTakenAfter: Y1 });
+    close(r.aavAtSigning, (10 + pv + 20) / 2);
+    close(yr(r, 2), 10 + pv - (10 + pv + 20) / 2);
+    close(r.totals.cbt, r.totals.attributedCost);
+    expect(r.flags.map((f) => f.rule)).toContain('O8');
+  });
+
+  it('D5 is flagged when a 50% test reads a season with deferred pay', () => {
+    const r = run(build([...guaranteed(1, 20), { currentSalary: 0, deferred: 35, kind: 'player', buyout: 1 }], {
+      ilirPct: 4,
+      deferral: { payments: [{ year: Y1 + 3, amount: 35 }], attribution: 'sequential', statedInterestPct: 0 },
+    }));
+    expect(r.flags.map((f) => f.rule)).toContain('D5');
+  });
+
+  it('F6 is flagged when the stated rate is exactly 1.5 points from the ILIR', () => {
+    const r = run(build([{ currentSalary: 5, deferred: 5 }], {
+      ilirPct: 1.5,
+      deferral: { payments: [{ year: Y1 + 2, amount: 5 }], attribution: 'sequential', statedInterestPct: 0 },
+    }));
+    expect(r.flags.map((f) => f.rule)).toEqual(expect.arrayContaining(['F6', 'X4', 'X5']));
   });
 
   it('O5 vested option is charged like an exercised club option', () => {
@@ -1645,6 +1828,8 @@ export interface OutcomeResult {
   voided: SeasonClass[];
   /** The buyout or opt-out payment actually paid when the contract ended, and the season it belongs to. */
   received: { season: number; amount: number } | null;
+  /** Non-[TEXT] rules that changed the result without producing a charge of their own (END, O2NS). */
+  notes: RuleId[];
 }
 
 /** UI and engine defaults (spec §6): club-type declined, player-type exercised, no opt-out. */
@@ -1690,7 +1875,7 @@ export function computeOutcome(
   }
 
   // V4: Valley Charge allocations stay charged even if the season is later nullified (V6).
-  for (const [season, amount] of valley.allocation) add(season, amount, 'Valley Charge', ['V4', 'V5', 'V6']);
+  for (const [season, amount] of valley.allocation) add(season, amount, 'Valley Charge', ['V1', 'V2', 'V3', 'V4', 'V5', 'V6']);
 
   // Club-type option exercised or vested (O1, O5) less the buyout previously included (O2).
   for (const c of played.filter((c) => c.effectiveKind === 'club')) {
@@ -1734,7 +1919,8 @@ export function computeOutcome(
       .filter((ch) => playedSet.has(ch.season) && !ch.rules.includes('V4') && !ch.rules.includes('V7'))
       .reduce((s, ch) => s + ch.amount, 0);
     const per = (paid - attributed) / nullified.length;
-    const rules: RuleId[] = ['O7', 'O8'];
+    const deferredPaid = played.some((c) => cost(c.season) > 0) || bonus.deferredPieces.length > 0;
+    const rules: RuleId[] = deferredPaid ? ['O7', 'O8'] : ['O7'];
     if (credit !== 0) rules.push('V9');
     if (valley.allocation.size > 0) rules.push('V8');
     for (const c of nullified) add(c.season, per, 'Opt-out true-up', rules);
@@ -1747,12 +1933,15 @@ export function computeOutcome(
 
   // O2: a deemed buyout never received (contract ended first) is deducted in its option year,
   // unless an O7 true-up already netted it (O2NS).
+  const notes: RuleId[] = end ? ['END'] : [];
   for (const c of voided) {
     const inc = included(c.season);
-    if (inc > 0 && received?.season !== c.season && nullified.length === 0) add(c.season, -inc, 'Buyout not received', ['O2']);
+    if (inc <= 0 || received?.season === c.season) continue;
+    if (nullified.length === 0) add(c.season, -inc, 'Buyout not received', ['O2']);
+    else if (!notes.includes('O2NS')) notes.push('O2NS');
   }
 
-  return { charges, played, voided, received };
+  return { charges, played, voided, received, notes };
 }
 ```
 
@@ -1821,18 +2010,28 @@ export function calculate(input: ContractInput, scenario: Scenario): Result {
     deferralPieces.reduce((s, p) => s + p.cost, 0) +
     (outcome.received?.amount ?? 0);
 
-  // Flags: every non-[TEXT] rule behind a non-zero charge, plus the V8 callout (spec §6).
+  // Flags (spec §5.1, §6): every [PRACTICE]/[INTERP]/[CONV] rule that moved a number, plus the V8 callout.
   const flags: Flag[] = [];
-  const seen = new Set<RuleId>();
+  const flag = (r: RuleId) => {
+    if (!flags.some((f) => f.rule === r)) flags.push({ rule: r, message: RULES[r].summary });
+  };
   for (const ch of outcome.charges) {
     if (Math.abs(ch.amount) < 1e-9) continue;
-    for (const r of ch.rules) {
-      const flagged = RULES[r].tag !== 'TEXT' || r === 'V8';
-      if (flagged && !seen.has(r)) {
-        seen.add(r);
-        flags.push({ rule: r, message: RULES[r].summary });
-      }
-    }
+    for (const r of ch.rules) if (RULES[r].tag !== 'TEXT' || r === 'V8') flag(r);
+  }
+  outcome.notes.forEach(flag); // END, O2NS: changed the result without a charge of their own
+  // D5: a 50% test or Valley value read a season that has deferred pay.
+  if (classes.some((c) => c.rules.includes('D5') && (rows.find((r) => r.season === c.season)?.deferred ?? 0) > 0)) flag('D5');
+  // F6: the 1.5-point band edge decided stated value vs discounting.
+  if (deferral.pieces.length > 0 && Math.abs(Math.abs(input.deferral.statedInterestPct - input.ilirPct) - 1.5) < 1e-9) flag('F6');
+  // V10: a non-guaranteed player option year was excluded from the Valley test.
+  if (classes.some((c) => c.effectiveKind === 'player' && !c.isGuaranteed)) flag('V10');
+  if (valley.usedV11) flag('V11');
+
+  const funding = computeFunding([...deferralPieces, ...bonus.deferredPieces]);
+  if (funding.snapshots.length > 0) {
+    flag('X4');
+    flag('X5');
   }
 
   return {
@@ -1845,7 +2044,7 @@ export function calculate(input: ContractInput, scenario: Scenario): Result {
       cash: [...cash.values()].reduce((s, v) => s + v, 0),
       attributedCost,
     },
-    funding: computeFunding([...deferralPieces, ...bonus.deferredPieces]),
+    funding,
     flags,
   };
 }
@@ -1854,7 +2053,7 @@ export function calculate(input: ContractInput, scenario: Scenario): Result {
 - [ ] **Step 6: Run them to confirm they pass**
 
 Run: `pnpm exec vitest run utils/cbt/__tests__/worked-examples.test.ts && pnpm run typecheck:engine`
-Expected: `Tests  32 passed (32)`; type-check exit 0.
+Expected: `Tests  36 passed (36)`; type-check exit 0.
 
 - [ ] **Step 7: Commit**
 
@@ -2034,6 +2233,7 @@ export const PRESETS: Preset[] = [
       ilirPct: 0,
     },
     sources: [],
+    reported: { seasons: range(2027, 5), cbt: 20 * M, tolerance: 0.01, note: 'Identity: no options, bonus or deferrals' },
   },
 ];
 ```
@@ -2041,7 +2241,7 @@ export const PRESETS: Preset[] = [
 - [ ] **Step 4: Run it to confirm it passes**
 
 Run: `pnpm exec vitest run utils/cbt/__tests__/presets.test.ts && pnpm run typecheck:engine`
-Expected: `Tests  11 passed (11)`; type-check exit 0.
+Expected: `Tests  12 passed (12)`; type-check exit 0.
 
 - [ ] **Step 5: Commit**
 
@@ -2131,13 +2331,48 @@ describe('invariants', () => {
       expect(leaves.totals.cbt - leaves.totals.attributedCost).toBeCloseTo(valley, 6);
     }
   });
+
+  it('general: CBT − attributed cost = Valley charges (V4) + Valley credits (V7), across opt-outs, deferrals and player options', () => {
+    const rand = rng(7);
+    let checked = 0;
+    for (let i = 0; i < 300; i++) {
+      // Guaranteed rows first, then trailing player options (END validation); an opt-out sits inside the guaranteed rows.
+      const g = 2 + Math.floor(rand() * 4);
+      const p = Math.floor(rand() * 3);
+      const n = g + p;
+      const rows = Array.from({ length: n }, (_, j) => {
+        const salary = Math.round(5 + rand() * 30);
+        const deferred = rand() < 0.3 ? Math.round(rand() * 10) : 0;
+        if (j >= g) return { currentSalary: salary, deferred, kind: 'player' as const, buyout: rand() < 0.5 ? Math.round(rand() * salary) : 0 };
+        return { currentSalary: salary, deferred };
+      });
+      const optOutAfter = g >= 2 && rand() < 0.6 ? Y1 + Math.floor(rand() * (g - 1)) : null;
+      const deferredTotal = rows.reduce((s, r) => s + r.deferred, 0);
+      const input = build(rows, {
+        ilirPct: 1 + rand() * 5,
+        signingBonus: { amount: Math.round(rand() * 10), payments: [] },
+        optOuts: optOutAfter === null ? [] : [{ afterSeason: optOutAfter, payment: Math.round(rand() * 5) }],
+        deferral: { payments: deferredTotal > 0 ? [{ year: Y1 + n + 2, amount: deferredTotal }] : [], attribution: 'sequential', statedInterestPct: 0 },
+      });
+      expect(validate(input).filter((v) => v.severity === 'error')).toEqual([]);
+      for (const sc of scenarios(input)) {
+        for (const optOutTakenAfter of optOutAfter === null ? [null] : [null, optOutAfter]) {
+          const r = calculate(input, { ...sc, optOutTakenAfter });
+          const valley = r.charges.filter((c) => c.rules.includes('V4') || c.rules.includes('V7')).reduce((s, c) => s + c.amount, 0);
+          expect(r.totals.cbt - r.totals.attributedCost).toBeCloseTo(valley, 6);
+          checked++;
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(500);
+  });
 });
 ```
 
 - [ ] **Step 2: Run it**
 
 Run: `pnpm exec vitest run utils/cbt/__tests__/invariants.test.ts`
-Expected: `Tests  2 passed (2)`. This test exercises code that already exists, so it should pass on the first run. If it fails, the failing seed gives a concrete counterexample: debug the engine, not the test.
+Expected: `Tests  3 passed (3)`. This test exercises code that already exists, so it should pass on the first run. If it fails, the failing seed gives a concrete counterexample: debug the engine, not the test.
 
 - [ ] **Step 3: Commit**
 
@@ -2154,7 +2389,7 @@ git commit -m "test: add CBT engine invariant tests"
 - [ ] **Step 1: Run everything**
 
 Run: `pnpm test && pnpm run typecheck:engine && pnpm run build`
-Expected: `Test Files  10 passed (10)`, `Tests  87 passed (87)`; type-check exit 0; build prints `✓ built in`.
+Expected: `Test Files  10 passed (10)`, `Tests  101 passed (101)`; type-check exit 0; build prints `✓ built in`.
 
 - [ ] **Step 2: Document the engine in CLAUDE.md**
 
@@ -2171,7 +2406,7 @@ In `CLAUDE.md` under `### Key Files`, add after the `utils/calculations.ts` bull
 git add CLAUDE.md
 git commit -m "docs: document the CBT engine in CLAUDE.md"
 git push -u origin refactor/cbt-engine
-gh pr create --title "refactor: add CBT contract engine (not yet wired to the UI)" --body "Implements spec docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md as a pure engine in utils/cbt/ with 87 tests (worked examples W1–W18, sourced presets, invariants) and a strict engine type-check in CI. Reproduces Ohtani \$46.08M, Bellinger \$44.75M, and Scherzer within \$648. No UI change; Plan B wires it in."
+gh pr create --title "refactor: add CBT contract engine (not yet wired to the UI)" --body "Implements spec docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md as a pure engine in utils/cbt/ with 101 tests (worked examples W1–W18, sourced presets, invariants) and a strict engine type-check in CI. Reproduces Ohtani \$46.08M, Bellinger \$44.75M, and Scherzer within \$648. No UI change; Plan B wires it in."
 ```
 
 Expected: CI `test` job (type-check + tests) green. Merge after checks and review.
