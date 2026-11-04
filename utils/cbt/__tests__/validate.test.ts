@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { validate } from '../validate';
+import { defaultScenario } from '..';
+import type { Scenario } from '../types';
+import { validate, validateScenario } from '../validate';
 import { build, guaranteed, Y1 } from './helpers';
 
 const errors = (input: ReturnType<typeof build>) => validate(input).filter((i) => i.severity === 'error');
@@ -85,5 +87,89 @@ describe('validate (§5.3)', () => {
 
   it('Y3: an opt-out must be followed by at least one season', () => {
     expect(errors(build(guaranteed(2, 20), { optOuts: [{ afterSeason: Y1 + 1, payment: 0 }] })).some((e) => e.rule === 'Y3')).toBe(true);
+  });
+
+  it('F7: sequential deferred principal with no payment schedule is an error', () => {
+    const input = build([{ currentSalary: 10, deferred: 5 }], { ilirPct: 4 });
+    expect(errors(input)).toEqual([expect.objectContaining({ rule: 'F7', message: 'Deferred principal needs a payment schedule.' })]);
+  });
+
+  it('rejects a non-finite salary', () => {
+    const input = build([{ currentSalary: NaN }]);
+    expect(errors(input).length).toBeGreaterThan(0);
+  });
+
+  it('rejects a negative option buyout', () => {
+    const input = build([...guaranteed(2, 20), { currentSalary: 10, kind: 'player', buyout: -5 }]);
+    expect(errors(input).map((e) => e.field)).toContain(`seasons.${Y1 + 2}.buyout`);
+  });
+
+  it('rejects a negative signing-bonus payment, even when the payments add up', () => {
+    const input = build(guaranteed(2, 20), { signingBonus: { amount: 5, payments: [{ year: Y1, amount: 10 }, { year: Y1 + 1, amount: -5 }] } });
+    expect(errors(input).map((e) => e.field)).toContain('signingBonus.payments');
+  });
+
+  it('rejects non-integer payment years and seasons', () => {
+    const input = build([{ currentSalary: 5, deferred: 5 }], {
+      ilirPct: 4,
+      deferral: { payments: [{ year: Y1 + 3.5, amount: 5 }], attribution: 'sequential', statedInterestPct: 0 },
+    });
+    expect(errors(input).map((e) => e.field)).toContain('deferral.payments');
+    const seasons = build(guaranteed(1, 5));
+    seasons.seasons[0].season = Y1 + 0.5;
+    expect(errors(seasons).length).toBeGreaterThan(0);
+  });
+
+  it('rejects non-finite or negative amounts across the input', () => {
+    const input = build(guaranteed(3, 20), {
+      ilirPct: NaN,
+      signingBonus: { amount: -1, payments: [] },
+      optOuts: [{ afterSeason: Y1, payment: Infinity }],
+      deferral: { payments: [{ year: Y1 + 5, amount: -2 }], attribution: 'unattributed', statedInterestPct: NaN, unattributedPrincipal: -3 },
+    });
+    const fields = errors(input).map((e) => e.field);
+    for (const f of ['ilirPct', 'signingBonus', 'optOuts', 'deferral.payments', 'deferral.statedInterestPct', 'deferral.unattributedPrincipal'])
+      expect(fields).toContain(f);
+  });
+
+  it('rejects duplicate opt-outs', () => {
+    const input = build(guaranteed(3, 20), { optOuts: [{ afterSeason: Y1, payment: 0 }, { afterSeason: Y1, payment: 1 }] });
+    expect(errors(input).some((e) => e.field === 'optOuts' && /more than once/.test(e.message))).toBe(true);
+  });
+
+  it('F4b: per-season deferred amounts in unattributed mode are ignored (warning)', () => {
+    const input = build([{ currentSalary: 5, deferred: 4 }, { currentSalary: 5 }], {
+      ilirPct: 4,
+      deferral: { payments: [{ year: 2030, amount: 4 }], attribution: 'unattributed', statedInterestPct: 0, unattributedPrincipal: 4 },
+    });
+    expect(validate(input)).toEqual([expect.objectContaining({ severity: 'warning', rule: 'F4b' })]);
+  });
+});
+
+describe('validateScenario', () => {
+  const contract = build([...guaranteed(3, 20), { currentSalary: 15, kind: 'club', buyout: 1 }]);
+  const scenario = (over: Partial<Scenario>): Scenario => ({ ...defaultScenario(contract), ...over });
+  const messages = (sc: Scenario) => validateScenario(contract, sc).filter((i) => i.severity === 'error');
+
+  it('accepts the default scenario', () => {
+    expect(validateScenario(contract, defaultScenario(contract))).toEqual([]);
+  });
+
+  it('optOutTakenAfter must match an opt-out', () => {
+    const three = build(guaranteed(3, 20));
+    expect(validateScenario(three, { ...defaultScenario(three), optOutTakenAfter: Y1 })).toEqual([
+      expect.objectContaining({ severity: 'error', field: 'scenario.optOutTakenAfter' }),
+    ]);
+  });
+
+  it('options must name option rows, with exercised or declined', () => {
+    expect(messages(scenario({ options: { [Y1]: 'exercised' } })).map((e) => e.field)).toEqual([`scenario.options.${Y1}`]);
+    expect(messages(scenario({ options: { [Y1 + 3]: 'maybe' as 'exercised' } })).map((e) => e.field)).toEqual([`scenario.options.${Y1 + 3}`]);
+  });
+
+  it('earned bonuses must be in a contract season, finite and non-negative', () => {
+    expect(messages(scenario({ earnedBonuses: { [Y1 + 9]: 1 } })).map((e) => e.field)).toEqual([`scenario.earnedBonuses.${Y1 + 9}`]);
+    expect(messages(scenario({ earnedBonuses: { [Y1]: -1 } })).map((e) => e.field)).toEqual([`scenario.earnedBonuses.${Y1}`]);
+    expect(messages(scenario({ earnedBonuses: { [Y1]: NaN } })).map((e) => e.field)).toEqual([`scenario.earnedBonuses.${Y1}`]);
   });
 });

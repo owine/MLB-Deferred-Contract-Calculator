@@ -6,12 +6,13 @@ import { computeFunding } from './funding';
 import { attributedCost, computeOutcome } from './outcome';
 import { RULES, type RuleId } from './rules';
 import type { ContractInput, Flag, Result, Scenario } from './types';
+import { validate, validateScenario } from './validate';
 import { computeValley } from './valley';
 
 export * from './types';
 export { RULES } from './rules';
 export type { RuleId, Tag } from './rules';
-export { validate } from './validate';
+export { validate, validateScenario } from './validate';
 export type { ValidationIssue } from './validate';
 
 /** Spec §6 defaults: club-type options declined, player-type exercised, no opt-out, no bonuses. */
@@ -21,8 +22,10 @@ export function defaultScenario(input: ContractInput): Scenario {
   return { options, optOutTakenAfter: null, earnedBonuses: {} };
 }
 
-/** Assumes `validate(input)` returned no errors. */
+/** Throws an Error listing every error from `validate(input)` and `validateScenario(input, scenario)`. Warnings do not throw. */
 export function calculate(input: ContractInput, scenario: Scenario): Result {
+  const errors = [...validate(input), ...validateScenario(input, scenario)].filter((i) => i.severity === 'error');
+  if (errors.length > 0) throw new Error(`Invalid contract or scenario: ${errors.map((e) => e.message).join(' ')}`);
   const classes = classify(input);
   const deferral = deferralCosts(input, classes);
   const bonus = signingBonusCost(input, classes);
