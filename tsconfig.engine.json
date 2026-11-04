@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "strict": true, "jsx": "preserve" },
+  "include": ["utils/cbt/**/*.ts", "data/**/*.ts"]
+}
