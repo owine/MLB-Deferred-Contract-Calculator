@@ -20,7 +20,7 @@ const FundingDetailCard = ({ icon, title, tag, children }: { icon: React.ReactNo
 export const FundingRules = () => {
   return (
     <div className="space-y-6 mt-8">
-      <h3 className="text-xl font-bold text-slate-800 px-1">Funding & Escrow Rules</h3>
+      <h3 className="text-xl font-bold text-slate-800 px-1">Funding Rules (Article XVI)</h3>
       
       {/* Timeline Card */}
       <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
@@ -99,7 +99,7 @@ export const FundingRules = () => {
           tag="Article XVI"
         >
           Full funding of the present value of deferred compensation obligations means the Club must fund the current present value of the outstanding deferred payments, discounted by 5% annually. <br/><br/>
-          <span className="text-slate-500 text-xs">Note: If the prime interest rate is 7% or higher, the parties may agree to amend this discount rate.</span>
+          <span className="text-slate-500 text-xs">Note: if the prime rate at J.P. Morgan Chase Bank on the preceding November 1 is 7% or higher, the Parties shall meet and confer and may, with due notice to the Clubs, amend this discount rate effective the next July 1.</span>
         </FundingDetailCard>
 
         <FundingDetailCard 
@@ -121,7 +121,7 @@ export const FundingRules = () => {
           title="Creditor Access" 
           tag="Article XVI"
         >
-          Crucially, while the funds must be exclusively for the purpose of satisfying the deferred obligation, the agreement specifies that "such amount(s) funded are subject to the claims of the Club's general creditors." This differs from a bankruptcy-remote escrow.
+          The funds must be used exclusively to satisfy the deferred obligation, yet Article XVI specifies that "such amount(s) funded are subject to the claims of the Club's general creditors."
         </FundingDetailCard>
 
         <div className="bg-amber-50 p-5 rounded-lg border border-amber-100">
@@ -132,7 +132,7 @@ export const FundingRules = () => {
             </div>
           </div>
           <p className="text-sm text-amber-800 leading-relaxed">
-            For contracts executed before December 11, 2011, Clubs are entitled to an annual deductible amount of deferred compensation which need not be funded. This deductible is the lesser of $2,000,000 or the present value of the total deferred compensation obligations owed.
+            For contracts executed before December 11, 2011, Clubs are entitled to an annual deductible amount of deferred compensation which need not be funded. This deductible is the lesser of $2,000,000 or the present value of the total deferred compensation owed under those contracts, and it applies to the aggregate of a Club's contracts from each Basic Agreement period, not to any one contract.
           </p>
         </div>
       </div>
