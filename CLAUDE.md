@@ -20,6 +20,8 @@ Single-page React + TypeScript app built with Vite. Calculates MLB Competitive B
 
 - `App.tsx` — Entire UI in one file: form inputs, validation, results cards, Recharts bar chart, year-by-year table, and static Funding & Escrow Rules section. Contains preset scenarios (Ohtani, Scherzer, Standard).
 - `utils/calculations.ts` — All financial logic: present value calculation (`PV = FV / (1+r)^n`), contract modeling, and number formatting. Exports `calculateContract()` which returns `CalculationResult` with AAV figures, yearly breakdown, and escrow requirements.
+- `utils/cbt/` — CBT contract engine (pure functions, not yet used by the UI). Implements every rule in `docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md`. `rules.ts` maps each rule id to its CBA citation and evidence tag. `calculate(input, scenario)` in `index.ts` is the entry point. Tests are in `utils/cbt/__tests__/` (worked examples W1–W18, presets, invariants). Strict type-check: `pnpm run typecheck:engine`.
+- `data/presets.ts` — Real-contract presets with sources and reported CBT figures.
 - `components/InfoTooltip.tsx` — Hover tooltip component used for field explanations.
 - `index.tsx` — React entry point, renders `<App />` into `#root`.
 
