@@ -39,6 +39,7 @@ export function calculate(input: ContractInput, scenario: Scenario): Result {
 
   return {
     classification: classes,
+    playedSeasons: outcome.played.map((c) => c.season),
     aavAtSigning: aav.aav,
     charges: outcome.charges,
     perSeason: ledger.perSeason,
