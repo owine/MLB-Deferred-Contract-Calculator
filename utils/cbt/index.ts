@@ -3,7 +3,7 @@ import { computeAav } from './aav';
 import { classify, isOptionRow, sortedSeasons } from './classify';
 import { deferralCosts, signingBonusCost } from './deferral';
 import { computeFunding } from './funding';
-import { computeOutcome } from './outcome';
+import { attributedCost, computeOutcome } from './outcome';
 import { RULES, type RuleId } from './rules';
 import type { ContractInput, Flag, Result, Scenario } from './types';
 import { computeValley } from './valley';
@@ -51,14 +51,7 @@ export function calculate(input: ContractInput, scenario: Scenario): Result {
   const years = [...new Set([...cash.keys(), ...cbt.keys()])].sort((a, b) => a - b);
   const perSeason = years.map((season) => ({ season, cbt: cbt.get(season) ?? 0, cash: cash.get(season) ?? 0 }));
 
-  const attributedCost =
-    outcome.played.reduce(
-      (s, c) => s + rows.find((r) => r.season === c.season)!.currentSalary + (scenario.earnedBonuses[c.season] ?? 0),
-      0,
-    ) +
-    bonus.cost +
-    deferralPieces.reduce((s, p) => s + p.cost, 0) +
-    (outcome.received?.amount ?? 0);
+  const attributed = attributedCost(input, scenario, outcome.played, deferral, bonus, outcome.received);
 
   // Flags (spec §5.1, §6): every [PRACTICE]/[INTERP]/[CONV] rule that moved a number, plus the V8 callout.
   const flags: Flag[] = [];
@@ -96,7 +89,7 @@ export function calculate(input: ContractInput, scenario: Scenario): Result {
     totals: {
       cbt: outcome.charges.reduce((s, ch) => s + ch.amount, 0),
       cash: [...cash.values()].reduce((s, v) => s + v, 0),
-      attributedCost,
+      attributedCost: attributed,
     },
     funding,
     flags,

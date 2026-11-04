@@ -21,6 +21,27 @@ export function decisionFor(scenario: Scenario, c: SeasonClass): 'exercised' | '
   return scenario.options[c.season] ?? (c.effectiveKind === 'club' ? 'declined' : 'exercised');
 }
 
+/**
+ * Attributed cost of what was actually paid for the played seasons, on the AAV cost basis (`costBySeason`):
+ * current salary, earned bonuses and deferred cost per season, plus the signing bonus and any buyout or
+ * opt-out payment received. Used for the O7 "paid" amount (O8) and for `totals.attributedCost`.
+ */
+export function attributedCost(
+  input: ContractInput,
+  scenario: Scenario,
+  played: SeasonClass[],
+  deferral: DeferralResult,
+  bonus: BonusResult,
+  received: OutcomeResult['received'],
+): number {
+  const rows = new Map(sortedSeasons(input).map((r) => [r.season, r]));
+  const perSeason = played.reduce(
+    (s, c) => s + rows.get(c.season)!.currentSalary + (scenario.earnedBonuses[c.season] ?? 0) + (deferral.costBySeason.get(c.season) ?? 0),
+    0,
+  );
+  return perSeason + bonus.cost + (received?.amount ?? 0);
+}
+
 export function computeOutcome(
   input: ContractInput,
   scenario: Scenario,
@@ -95,10 +116,7 @@ export function computeOutcome(
   // O7: nullified guaranteed Player Option Years → true-up of paid − attributed (excl. Valley amounts, V9).
   const nullified = voided.filter((c) => c.effectiveKind === 'player' && c.isGuaranteed);
   if (nullified.length > 0) {
-    const paid =
-      played.reduce((s, c) => s + rows.get(c.season)!.currentSalary + cost(c.season) + (scenario.earnedBonuses[c.season] ?? 0), 0) +
-      bonus.cost +
-      (received?.amount ?? 0); // O8: deferrals and A7 bonus at attributed cost
+    const paid = attributedCost(input, scenario, played, deferral, bonus, received); // O8: deferrals and A7 bonus at attributed cost
     const attributed = charges
       .filter((ch) => playedSet.has(ch.season) && !ch.rules.includes('V4') && !ch.rules.includes('V7'))
       .reduce((s, ch) => s + ch.amount, 0);
