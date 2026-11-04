@@ -1,8 +1,9 @@
 import React from 'react';
 import { defaultScenario, type ContractInput, type Scenario } from '../utils/cbt';
 import { sortRows } from '../utils/form';
-import { MoneyInput, cardClass } from './fields';
-import { KIND_LABELS } from './ScheduleEditor';
+import { MoneyInput } from './fields';
+import { KIND_LABELS } from './labels';
+import { cardClass } from './styles';
 
 /** "What happens?" toggles: option decisions, opt-out, earned bonuses (spec §6). Declining or opting out ends the contract. */
 export const ScenarioPanel: React.FC<{

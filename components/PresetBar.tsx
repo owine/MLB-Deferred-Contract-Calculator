@@ -1,18 +1,8 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { PRESET_GROUPS, type Preset } from '../data/presets';
-import { calculate, defaultScenario } from '../utils/cbt';
 import { formatMoney } from '../utils/format';
-
-/** Reported CBT vs engine CBT for a preset's reported seasons, under its default scenario (spec §6). */
-export function reconcile(preset: Preset): { engine: number; reported: number; delta: number } | null {
-  if (!preset.reported) return null;
-  const r = calculate(preset.input, defaultScenario(preset.input));
-  const values = preset.reported.seasons.map((s) => r.perSeason.find((p) => p.season === s)?.cbt ?? 0);
-  const worst = values.reduce((w, v) => (Math.abs(v - preset.reported!.cbt) > Math.abs(w - preset.reported!.cbt) ? v : w), values[0]);
-  const delta = Math.round(worst - preset.reported.cbt);
-  return { engine: worst, reported: preset.reported.cbt, delta: delta === 0 ? 0 : delta }; // no "-$0"
-}
+import { reconcile } from '../utils/presets';
 
 export const PresetBar: React.FC<{ presets: Preset[]; activeId: string | null; onLoad: (p: Preset) => void }> = ({ presets, activeId, onLoad }) => {
   const active = presets.find((p) => p.id === activeId) ?? null;

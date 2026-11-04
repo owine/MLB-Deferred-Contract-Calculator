@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Result } from '../utils/cbt';
 import { formatMoney } from '../utils/format';
-import { cardClass } from './fields';
+import { cardClass } from './styles';
 
 /** Article XVI: the funded balance the club must hold each July 1 (X1–X5). Hidden when nothing is deferred. */
 export const FundingSchedule: React.FC<{ result: Result }> = ({ result }) => {

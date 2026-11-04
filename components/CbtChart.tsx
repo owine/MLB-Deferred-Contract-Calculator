@@ -2,7 +2,7 @@ import React from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Result } from '../utils/cbt';
 import { formatMoney } from '../utils/format';
-import { cardClass } from './fields';
+import { cardClass } from './styles';
 
 /** CBT charged vs cash received per calendar year, with the last played season marked (spec §6). */
 export const CbtChart: React.FC<{ result: Result }> = ({ result }) => {

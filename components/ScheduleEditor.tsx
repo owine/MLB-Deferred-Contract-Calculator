@@ -3,15 +3,8 @@ import type { ContractInput, ValidationIssue, YearKind } from '../utils/cbt';
 import { setOptOutPayment, sortRows, toggleOptOut, updateRow } from '../utils/form';
 import { InfoTooltip } from './InfoTooltip';
 import { MoneyInput } from './fields';
+import { KIND_LABELS } from './labels';
 
-export const KIND_LABELS: Record<YearKind, string> = {
-  guaranteed: 'Guaranteed',
-  club: 'Club option',
-  mutual: 'Mutual option',
-  vesting: 'Vesting option',
-  player: 'Player option',
-  dual: 'Dual option',
-};
 const OPTION = new Set<YearKind>(['club', 'mutual', 'vesting', 'player', 'dual']);
 
 const KIND_TIP =

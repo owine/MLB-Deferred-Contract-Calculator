@@ -20,9 +20,10 @@ Single-page React + TypeScript app built with Vite. Calculates the MLB Competiti
 ### Key Files
 
 - `App.tsx` — State and layout only: holds the `ContractInput` and `Scenario`, validates, calls the engine, and lays out the components.
-- `components/` — `ContractTerms`, `ScheduleEditor`, `DeferralEditor`, `PaymentsEditor`, `IssuesList` (inputs); `ScenarioPanel`, `ResultCards`, `FlagsCallout`, `CbtChart`, `YearTable`, `FundingSchedule`, `FundingRules` (results); `PresetBar`, `fields.tsx` (shared inputs), `InfoTooltip`.
+- `components/` — `ContractTerms`, `ScheduleEditor`, `DeferralEditor`, `PaymentsEditor`, `IssuesList` (inputs); `ScenarioPanel`, `ResultCards`, `FlagsCallout`, `CbtChart`, `YearTable`, `FundingSchedule`, `FundingRules` (results); `PresetBar`, `fields.tsx` (shared inputs), `InfoTooltip`, `TagBadge`. Each `.tsx` exports only components, so React Fast Refresh can hot-swap it. Shared class strings live in `components/styles.ts`, and display labels (`KIND_LABELS`, `TAG_HELP`) in `components/labels.ts`.
 - `utils/form.ts` — Pure helpers for editing a contract and keeping the scenario valid (`syncScenario`); tested in `utils/__tests__/form.test.ts`.
 - `utils/format.ts` — Money formatting and parsing.
+- `utils/presets.ts` — `reconcile()`: a preset's reported CBT against the engine's, for the worst reported season; tested in `utils/__tests__/presets.test.ts`.
 - `utils/cbt/` — CBT contract engine (pure functions). Implements every rule in `docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md`. `rules.ts` maps each rule id to its CBA citation and evidence tag. `calculate(input, scenario)` in `index.ts` is the entry point. Tests are in `utils/cbt/__tests__/` (worked examples W1–W18, presets, invariants). Strict type-check: `pnpm run typecheck:engine`.
 - `data/presets.ts` — Real-contract presets with sources and reported CBT figures.
 - `index.tsx` — React entry point, renders `<App />` into `#root`.
