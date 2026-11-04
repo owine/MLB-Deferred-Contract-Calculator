@@ -1,7 +1,7 @@
 // Scenario outcomes: O1–O8, V7–V9, B1, END (spec §2.5–§2.7).
 import type { AavResult } from './aav';
 import { isOptionRow, sortedSeasons } from './classify';
-import type { BonusResult, DeferralResult } from './deferral';
+import { deferralRuleIds, type BonusResult, type DeferralResult } from './deferral';
 import type { RuleId } from './rules';
 import type { ContractInput, Charge, ChargeKind, Scenario, SeasonClass } from './types';
 import type { ValleyResult } from './valley';
@@ -55,6 +55,8 @@ export function computeOutcome(
 ): OutcomeResult {
   const rows = new Map(sortedSeasons(input).map((r) => [r.season, r]));
   const cost = (season: number) => deferral.costBySeason.get(season) ?? 0;
+  // F-rules for an option charge whose amount includes deferred cost.
+  const fRules = (seasons: SeasonClass[]): RuleId[] => (seasons.some((c) => cost(c.season) > 0) ? deferralRuleIds(input) : []);
   const charges: Charge[] = [];
   const add = (season: number, amount: number, label: string, kind: ChargeKind, rules: RuleId[]) =>
     charges.push({ season, amount, label, kind, rules });
@@ -87,7 +89,7 @@ export function computeOutcome(
   // Club-type option exercised or vested (O1, O5) less the buyout previously included (O2).
   for (const c of played.filter((c) => c.effectiveKind === 'club')) {
     const vesting = rows.get(c.season)!.kind === 'vesting';
-    add(c.season, rows.get(c.season)!.currentSalary + cost(c.season), vesting ? 'Vested option' : 'Exercised option', 'option', vesting ? ['O1', 'O5'] : ['O1']);
+    add(c.season, rows.get(c.season)!.currentSalary + cost(c.season), vesting ? 'Vested option' : 'Exercised option', 'option', [...(vesting ? ['O1', 'O5'] as RuleId[] : ['O1'] as RuleId[]), ...fRules([c])]);
     if (included(c.season) > 0) add(c.season, -included(c.season), 'Buyout not received', 'option', ['O2']);
   }
 
@@ -96,7 +98,8 @@ export function computeOutcome(
   if (ngPlayer.length > 0) {
     const avg = ngPlayer.reduce((s, c) => s + rows.get(c.season)!.currentSalary + cost(c.season), 0) / ngPlayer.length;
     const buyoutShare = ngPlayer.reduce((s, c) => s + included(c.season), 0) / ngPlayer.length;
-    for (const c of ngPlayer) add(c.season, avg - buyoutShare, 'Exercised player option', 'option', buyoutShare > 0 ? ['O6', 'O2NS'] : ['O6']);
+    const o6Rules: RuleId[] = [...(buyoutShare > 0 ? ['O6', 'O2NS'] as RuleId[] : ['O6'] as RuleId[]), ...fRules(ngPlayer)];
+    for (const c of ngPlayer) add(c.season, avg - buyoutShare, 'Exercised player option', 'option', [...o6Rules]);
   }
 
   // B1: earned bonuses in the season earned (played seasons only).

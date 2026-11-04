@@ -127,11 +127,15 @@ export function signingBonusCost(input: ContractInput, classes: SeasonClass[]): 
   return { cost, nominal: amount, deferredPieces };
 }
 
+/** Rules behind a charge that includes deferred cost (F2, F3, F4a|F4b, F5, F7). */
+export function deferralRuleIds(input: ContractInput): RuleId[] {
+  return ['F2', 'F3', input.deferral.attribution === 'sequential' ? 'F4a' : 'F4b', 'F5', 'F7'];
+}
+
 /** Rules behind the deferred part of the AAV: F2–F7 when a Guaranteed season has deferred cost, A7 when a bonus installment is discounted. */
 export function aavDeferralRules(input: ContractInput, classes: SeasonClass[], deferral: DeferralResult, bonus: BonusResult): RuleId[] {
   const rules: RuleId[] = [];
-  if (classes.some((c) => c.isGuaranteed && (deferral.costBySeason.get(c.season) ?? 0) > 0))
-    rules.push('F2', 'F3', input.deferral.attribution === 'sequential' ? 'F4a' : 'F4b', 'F5', 'F7');
+  if (classes.some((c) => c.isGuaranteed && (deferral.costBySeason.get(c.season) ?? 0) > 0)) rules.push(...deferralRuleIds(input));
   if (bonus.deferredPieces.length > 0) rules.push('A7');
   return rules;
 }

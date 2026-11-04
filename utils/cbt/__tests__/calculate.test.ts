@@ -89,4 +89,30 @@ describe('calculate', () => {
       expect(aavRules(run(input))).toEqual(['A1', 'A2', 'A7']);
     });
   });
+
+  describe('option charge rules', () => {
+    const F = ['F2', 'F3', 'F4a', 'F5', 'F7'];
+    const flagged = (r: ReturnType<typeof run>) => r.flags.map((f) => f.rule);
+    it('an exercised club option with the only deferral carries the F-rules and flags them; declined does not', () => {
+      const input = build([...guaranteed(1, 10), { currentSalary: 5, deferred: 5, kind: 'club' }], {
+        ilirPct: 5,
+        deferral: { payments: [{ year: Y1 + 4, amount: 5 }], attribution: 'sequential', statedInterestPct: 0 },
+      });
+      const ex = run(input, { options: { [Y1 + 1]: 'exercised' } });
+      expect(ex.charges.find((c) => c.kind === 'option')!.rules).toEqual(['O1', ...F]);
+      expect(flagged(ex)).toEqual(expect.arrayContaining(['F4a', 'F5', 'F7']));
+      const dec = run(input, { options: { [Y1 + 1]: 'declined' } });
+      for (const r of ['F4a', 'F5', 'F7']) expect(flagged(dec)).not.toContain(r);
+    });
+    it('O6 player-option charges carry the F-rules when a season in the group has deferred cost', () => {
+      const input = build([...guaranteed(1, 20), { currentSalary: 10, deferred: 4, kind: 'player', buyout: 6 }, { currentSalary: 10, kind: 'player', buyout: 6 }], {
+        ilirPct: 5,
+        deferral: { payments: [{ year: Y1 + 5, amount: 4 }], attribution: 'sequential', statedInterestPct: 0 },
+      });
+      const o6 = run(input).charges.filter((c) => c.rules.includes('O6'));
+      expect(o6).toHaveLength(2);
+      for (const c of o6) expect(c.rules).toEqual(expect.arrayContaining(F));
+      expect(run(build([...guaranteed(1, 20), { currentSalary: 10, kind: 'player', buyout: 6 }])).charges.find((c) => c.rules.includes('O6'))!.rules).not.toContain('F2');
+    });
+  });
 });
