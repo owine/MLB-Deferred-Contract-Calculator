@@ -19,7 +19,7 @@
 Every code block below was generated from a prototype worktree, not retyped. In that prototype:
 
 - `pnpm add -D vitest@5.0.5` installed with no build scripts. The repo's `ignore-scripts=true` and empty `allowBuilds` needed no change.
-- `pnpm test` passed **101 tests in 10 files**. The plan's literal `pnpm test`, `pnpm run typecheck:engine` and `pnpm run build` commands were run with the scripts in place.
+- `pnpm test` passed **103 tests in 10 files**. The plan's literal `pnpm test`, `pnpm run typecheck:engine` and `pnpm run build` commands were run with the scripts in place.
 - `pnpm exec tsc --noEmit -p tsconfig.engine.json` (strict) reported **0 errors**, and a planted type error made it fail.
 - `pnpm run build` succeeded.
 - **Mutation checks:**
@@ -1604,6 +1604,9 @@ describe('worked examples', () => {
       close(r.totals.cbt, 66);
       close(r.totals.cash, 66);
     });
+    it('V10 is flagged: the non-guaranteed option year was excluded from the Valley test', () => {
+      expect(run(input).flags.map((f) => f.rule)).toContain('V10');
+    });
   });
 
   describe('W6 Y3/O6: failing opt-out (payment 25)', () => {
@@ -1796,6 +1799,12 @@ describe('worked examples', () => {
       deferral: { payments: [{ year: Y1 + 2, amount: 5 }], attribution: 'sequential', statedInterestPct: 0 },
     }));
     expect(r.flags.map((f) => f.rule)).toEqual(expect.arrayContaining(['F6', 'X4', 'X5']));
+  });
+
+  it('V11 is flagged when a guaranteed player option buyout becomes Signing Bonus inside the floor hypothetical', () => {
+    const r = run(build([...guaranteed(3, 20), { currentSalary: 12, kind: 'player', buyout: 5 }]));
+    expect(r.flags.map((f) => f.rule)).toContain('V11');
+    expect(run(build([...guaranteed(3, 20), { currentSalary: 12, kind: 'player' }])).flags.map((f) => f.rule)).not.toContain('V11');
   });
 
   it('O5 vested option is charged like an exercised club option', () => {
@@ -2020,8 +2029,12 @@ export function calculate(input: ContractInput, scenario: Scenario): Result {
     for (const r of ch.rules) if (RULES[r].tag !== 'TEXT' || r === 'V8') flag(r);
   }
   outcome.notes.forEach(flag); // END, O2NS: changed the result without a charge of their own
-  // D5: a 50% test or Valley value read a season that has deferred pay.
-  if (classes.some((c) => c.rules.includes('D5') && (rows.find((r) => r.season === c.season)?.deferred ?? 0) > 0)) flag('D5');
+  // D5: a 50% test or Valley value read a season that has deferred pay (per-season `deferred` is used only in sequential mode).
+  if (
+    input.deferral.attribution === 'sequential' &&
+    classes.some((c) => c.rules.includes('D5') && (rows.find((r) => r.season === c.season)?.deferred ?? 0) > 0)
+  )
+    flag('D5');
   // F6: the 1.5-point band edge decided stated value vs discounting.
   if (deferral.pieces.length > 0 && Math.abs(Math.abs(input.deferral.statedInterestPct - input.ilirPct) - 1.5) < 1e-9) flag('F6');
   // V10: a non-guaranteed player option year was excluded from the Valley test.
@@ -2053,7 +2066,7 @@ export function calculate(input: ContractInput, scenario: Scenario): Result {
 - [ ] **Step 6: Run them to confirm they pass**
 
 Run: `pnpm exec vitest run utils/cbt/__tests__/worked-examples.test.ts && pnpm run typecheck:engine`
-Expected: `Tests  36 passed (36)`; type-check exit 0.
+Expected: `Tests  38 passed (38)`; type-check exit 0.
 
 - [ ] **Step 7: Commit**
 
@@ -2389,7 +2402,7 @@ git commit -m "test: add CBT engine invariant tests"
 - [ ] **Step 1: Run everything**
 
 Run: `pnpm test && pnpm run typecheck:engine && pnpm run build`
-Expected: `Test Files  10 passed (10)`, `Tests  101 passed (101)`; type-check exit 0; build prints `✓ built in`.
+Expected: `Test Files  10 passed (10)`, `Tests  103 passed (103)`; type-check exit 0; build prints `✓ built in`.
 
 - [ ] **Step 2: Document the engine in CLAUDE.md**
 
@@ -2406,7 +2419,7 @@ In `CLAUDE.md` under `### Key Files`, add after the `utils/calculations.ts` bull
 git add CLAUDE.md
 git commit -m "docs: document the CBT engine in CLAUDE.md"
 git push -u origin refactor/cbt-engine
-gh pr create --title "refactor: add CBT contract engine (not yet wired to the UI)" --body "Implements spec docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md as a pure engine in utils/cbt/ with 101 tests (worked examples W1–W18, sourced presets, invariants) and a strict engine type-check in CI. Reproduces Ohtani \$46.08M, Bellinger \$44.75M, and Scherzer within \$648. No UI change; Plan B wires it in."
+gh pr create --title "refactor: add CBT contract engine (not yet wired to the UI)" --body "Implements spec docs/superpowers/specs/2026-11-04-cbt-contract-engine-design.md as a pure engine in utils/cbt/ with 103 tests (worked examples W1–W18, sourced presets, invariants) and a strict engine type-check in CI. Reproduces Ohtani \$46.08M, Bellinger \$44.75M, and Scherzer within \$648. No UI change; Plan B wires it in."
 ```
 
 Expected: CI `test` job (type-check + tests) green. Merge after checks and review.
