@@ -17,14 +17,21 @@ describe('reconcile', () => {
     expect(Math.abs(rec.engine - rec.reported)).toBeLessThanOrEqual(p.reported!.tolerance);
   });
 
-  it('reports the season furthest from the reported figure', () => {
-    const p = PRESETS.find((x) => new Set(cbtBySeason(x).map((s) => s.cbt)).size > 1)!;
+  // The worst season is listed second, and both directions are checked, so returning the first value, the max,
+  // the min, or the season closest to the reported figure each fails at least one case.
+  describe.each(['above', 'below'] as const)('reports the season furthest from the reported figure (worst is %s it)', (side) => {
+    const p = PRESETS.find((x) => new Set(cbtBySeason(x).map((s) => s.cbt)).size > 1);
+    it('has a preset with varying per-season CBT to test against', () => expect(p).toBeDefined());
+    if (!p) return;
     const seasons = cbtBySeason(p);
-    const low = Math.min(...seasons.map((s) => s.cbt));
-    const high = Math.max(...seasons.map((s) => s.cbt));
-    const rec = reconcile({ ...p, reported: { seasons: seasons.map((s) => s.season), cbt: low, tolerance: 0, note: '' } })!;
-    expect(rec.engine).toBe(high);
-    expect(rec.delta).toBe(Math.round(high - low));
+    const low = seasons.reduce((a, b) => (b.cbt < a.cbt ? b : a));
+    const high = seasons.reduce((a, b) => (b.cbt > a.cbt ? b : a));
+    const [worst, other] = side === 'above' ? [high, low] : [low, high];
+    it('picks it', () => {
+      const rec = reconcile({ ...p, reported: { seasons: [other.season, worst.season], cbt: other.cbt, tolerance: 0, note: '' } })!;
+      expect(rec.engine).toBe(worst.cbt);
+      expect(rec.delta).toBe(Math.round(worst.cbt - other.cbt));
+    });
   });
 
   it('never reports a negative zero delta (no "-$0")', () => {
