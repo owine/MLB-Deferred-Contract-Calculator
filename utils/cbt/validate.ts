@@ -108,7 +108,9 @@ export function validate(input: ContractInput): ValidationIssue[] {
         rule: 'F4b',
       });
     const principal = input.deferral.unattributedPrincipal ?? 0;
-    if (input.deferral.payments.length > 0 && !(principal > 0))
+    if (principal > 0 && input.deferral.payments.length === 0)
+      err('deferral.payments', 'Deferred principal needs a payment schedule.', 'F7');
+    else if (input.deferral.payments.length > 0 && !(principal > 0))
       err('deferral.unattributedPrincipal', 'Enter the total deferred principal.', 'F4b');
     else if (zeroInterest && Math.abs(paymentTotal - principal) > 0.5)
       mismatch(`Payments (${Math.round(paymentTotal)}) must equal the deferred principal (${Math.round(principal)}) at 0% interest.`);

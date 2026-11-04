@@ -144,6 +144,14 @@ describe('validate (§5.3)', () => {
     });
     expect(validate(input)).toEqual([expect.objectContaining({ severity: 'warning', rule: 'F4b' })]);
   });
+
+  it('F7: unattributed principal with no payment schedule is an error, even inside the F3 band', () => {
+    const input = build(guaranteed(2, 10), {
+      ilirPct: 4,
+      deferral: { payments: [], attribution: 'unattributed', statedInterestPct: 3, unattributedPrincipal: 10 },
+    });
+    expect(errors(input)).toEqual([expect.objectContaining({ rule: 'F7', message: 'Deferred principal needs a payment schedule.' })]);
+  });
 });
 
 describe('validateScenario', () => {
