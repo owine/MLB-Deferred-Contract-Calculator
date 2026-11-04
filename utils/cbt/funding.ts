@@ -16,5 +16,5 @@ export function computeFunding(pieces: Piece[]): { snapshots: { july1: number; r
       .reduce((s, p) => s + p.cash / Math.pow(1 + FUNDING_RATE_PCT / 100, p.year - y), 0);
     snapshots.push({ july1: y, required });
   }
-  return { snapshots, peak: Math.max(...snapshots.map((s) => s.required)) };
+  return { snapshots, peak: snapshots.length ? Math.max(...snapshots.map((s) => s.required)) : 0 };
 }
