@@ -12,6 +12,7 @@ export interface ValidationIssue {
 }
 
 const OPTION_KINDS = new Set(['club', 'mutual', 'vesting', 'player', 'dual']);
+const YEAR_KINDS = new Set(['guaranteed', ...OPTION_KINDS]);
 
 /** A usable money amount: a finite number, zero or more. */
 export function isFiniteNonNeg(x: number): boolean {
@@ -36,6 +37,7 @@ export function validate(input: ContractInput): ValidationIssue[] {
   rows.forEach((r, i) => {
     if (!Number.isInteger(r.season)) err(`seasons.${r.season}`, `Season ${r.season} must be a whole year.`);
     if (i > 0 && r.season !== rows[i - 1].season + 1) err(`seasons.${r.season}`, 'Seasons must be consecutive.');
+    if (!YEAR_KINDS.has(r.kind)) err(`seasons.${r.season}.kind`, `Unknown year type "${r.kind}".`);
     const salary = [r.currentSalary, r.deferred];
     if (!salary.every(isFiniteNonNeg))
       err(`seasons.${r.season}`, salary.every(Number.isFinite) ? 'Salary amounts cannot be negative.' : 'Salary amounts must be numbers.');
@@ -53,9 +55,12 @@ export function validate(input: ContractInput): ValidationIssue[] {
   const first = rows[0].season;
   const last = rows[rows.length - 1].season; // last season of the maximum term
   input.optOuts.forEach((o, i) => {
-    if (o.afterSeason < first || o.afterSeason >= last) err('optOuts', `Opt-out after ${o.afterSeason} must be followed by at least one season.`, 'Y3');
-    if (input.optOuts.findIndex((x) => x.afterSeason === o.afterSeason) < i)
-      err('optOuts', `Opt-out after ${o.afterSeason} is listed more than once.`, 'Y3');
+    if (!Number.isInteger(o.afterSeason)) err('optOuts', 'Opt-out season must be a whole year.', 'Y3');
+    else {
+      if (o.afterSeason < first || o.afterSeason >= last) err('optOuts', `Opt-out after ${o.afterSeason} must be followed by at least one season.`, 'Y3');
+      if (input.optOuts.findIndex((x) => x.afterSeason === o.afterSeason) < i)
+        err('optOuts', `Opt-out after ${o.afterSeason} is listed more than once.`, 'Y3');
+    }
     amount('optOuts', o.payment, 'Opt-out payment', 'Y3');
     const next = rows.find((r) => r.season === o.afterSeason + 1);
     if (next && next.kind !== 'guaranteed') err('optOuts', `The season after an opt-out (${next.season}) must be a guaranteed row.`, 'Y4');
@@ -88,8 +93,10 @@ export function validate(input: ContractInput): ValidationIssue[] {
     }
   }
   const hasA7 = bonusPayments.some((p) => p.year > last);
-  if (!Number.isFinite(input.ilirPct)) err('ilirPct', 'The Imputed Loan Interest Rate must be a number.', 'D2');
-  else if ((hasDeferral || hasA7) && !(input.ilirPct > 0 && input.ilirPct <= 25)) err('ilirPct', 'Enter the Imputed Loan Interest Rate (0–25%).', 'D2');
+  if (hasDeferral || hasA7) {
+    if (!Number.isFinite(input.ilirPct)) err('ilirPct', 'The Imputed Loan Interest Rate must be a number.', 'D2');
+    else if (!(input.ilirPct > 0 && input.ilirPct <= 25)) err('ilirPct', 'Enter the Imputed Loan Interest Rate (0–25%).', 'D2');
+  }
   amount('deferral.statedInterestPct', input.deferral.statedInterestPct, 'Stated interest', 'F3');
   if (input.deferral.unattributedPrincipal !== undefined)
     amount('deferral.unattributedPrincipal', input.deferral.unattributedPrincipal, 'Deferred principal', 'F4b');

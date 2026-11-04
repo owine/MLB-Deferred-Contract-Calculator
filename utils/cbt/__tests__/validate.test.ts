@@ -152,6 +152,25 @@ describe('validate (§5.3)', () => {
     });
     expect(errors(input)).toEqual([expect.objectContaining({ rule: 'F7', message: 'Deferred principal needs a payment schedule.' })]);
   });
+
+  it.each([[NaN], [Y1 + 0.5]])('Y3: an opt-out after %s is rejected as not a whole year (and not as a duplicate)', (afterSeason) => {
+    const input = build(guaranteed(3, 20), { optOuts: [{ afterSeason, payment: 0 }] });
+    expect(errors(input)).toEqual([expect.objectContaining({ field: 'optOuts', rule: 'Y3', message: 'Opt-out season must be a whole year.' })]);
+  });
+
+  it('rejects an unknown year type', () => {
+    const input = build([{ currentSalary: 20 }, { currentSalary: 10, kind: 'bogus' as never }]);
+    expect(errors(input).map((e) => e.message)).toContainEqual(expect.stringMatching(/^Unknown year type/));
+  });
+
+  it('D2: a non-finite ILIR is an error only when the contract has deferred compensation', () => {
+    expect(validate(build(guaranteed(2, 20), { ilirPct: NaN }))).toEqual([]);
+    const deferred = build([{ currentSalary: 5, deferred: 5 }], {
+      ilirPct: NaN,
+      deferral: { payments: [{ year: Y1 + 3, amount: 5 }], attribution: 'sequential', statedInterestPct: 0 },
+    });
+    expect(errors(deferred)).toEqual([expect.objectContaining({ field: 'ilirPct', rule: 'D2' })]);
+  });
 });
 
 describe('validateScenario', () => {
