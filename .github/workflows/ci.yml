@@ -37,6 +37,9 @@ jobs:
           cache: true
           require-lockfile: true
 
+      - name: Type-check engine
+        run: pnpm run typecheck:engine
+
       - name: Run tests
         run: pnpm test
 

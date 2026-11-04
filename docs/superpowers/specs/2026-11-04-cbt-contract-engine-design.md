@@ -230,11 +230,16 @@ interface Scenario {
   optOutTakenAfter: number | null;                                 // must match an OptOut.afterSeason
   earnedBonuses: Record<number, number>;                           // B1
 }
-interface Charge { season: number; amount: number; rule: RuleId; note?: string }
+type ChargeKind = 'aav' | 'valley' | 'valleyCredit' | 'option' | 'trueUp' | 'buyout' | 'bonus';
+interface Charge {
+  season: number; amount: number; label: string;
+  kind: ChargeKind;        // what the charge is; code identifies charges by kind, never by rule-id membership
+  rules: RuleId[];         // every rule that determined the amount (§6), incl. F-rules when it carries deferred cost
+}
 interface Result {
   classification: SeasonClass[];
   aavAtSigning: number;
-  charges: Charge[];                       // every component, each with a rule id
+  charges: Charge[];                       // every component, each with its kind and rule ids
   perSeason: { season: number; cbt: number; cash: number }[];
   totals: { cbt: number; cash: number; attributedCost: number };  // cash: deferrals nominal; attributedCost: deferrals at F3 value (used by the §8 invariant)
   funding: { snapshots: { july1: number; required: number }[]; peak: number };
@@ -244,18 +249,19 @@ interface Result {
 
 ### 5.2 Data flow
 
-`ContractInput` → `classify` → `deferral` (cost per season) → `aav` (needs classification + deferral) → `valley` (needs aav + classification) → `outcome(Scenario)` emits `Charge[]` → aggregate `perSeason` / `totals` → `funding` (deferral payments only). `flags` collects every non-[TEXT] rule that affected a non-zero charge.
+`calculate()` first runs `validate(input)` and `validateScenario(input, scenario)` and **throws** on any error-severity issue (warnings don't throw). Then: `ContractInput` → `classify` → `deferral` (cost per season) → `aav` (needs classification + deferral) → `valley` (needs aav + classification) → `outcome(Scenario)` emits `Charge[]` → `ledger` (cash by year, `perSeason`, `totals`) → `funding` (deferral payments only) → `flags` (every non-[TEXT] rule behind a non-zero charge, using `MONEY_EPS`). Attributed cost has a single definition, on the same `costBySeason` basis as the AAV, and both O7 and `totals.attributedCost` use it.
 
 ### 5.3 Validation (blocking errors, shown inline)
 
 - At least one season, with seasons consecutive and ascending. **At least one Guaranteed season** (A2's no-Guaranteed-Years fallback is out of scope, §2.8).
-- `currentSalary ≥ 0` and `deferred ≥ 0` for every season.
+- **Numbers:** every amount (current salary, deferred, buyout, signing bonus and each of its payments, deferral payments, opt-out payments, stated interest, `unattributedPrincipal`) must be finite and ≥ 0; `NaN` is rejected. ILIR must be finite. Seasons and payment years must be integers. Duplicate opt-outs (same `afterSeason`) are rejected.
 - **Ordering (END [CONV]):** no `guaranteed` row may follow an option row, because declining an option ends the contract and would otherwise void a Guaranteed Year. The season right after an opt-out must be a `guaranteed` row (Y4).
 - Every deferral payment year, and every signing-bonus installment after the last Guaranteed season, falls after the last season of the maximum term (F1 scope limit).
-- **F7 consistency:** at 0% stated interest, Σ payments must equal the principal: Σ `deferred` in sequential mode, `unattributedPrincipal` in unattributed mode. This is an error. With stated interest, a mismatch is a warning showing the amount. Unattributed mode requires `unattributedPrincipal`.
+- **F7 consistency:** at 0% stated interest, Σ payments must equal the principal: Σ `deferred` in sequential mode, `unattributedPrincipal` in unattributed mode. This is an error. With stated interest, a mismatch is a warning showing the amount. Unattributed mode requires `unattributedPrincipal`. **Deferred principal with no payment schedule is an error in both modes**, at any stated interest. In unattributed mode, per-season `deferred` values are ignored, and a warning (F4b) says so.
 - `buyout` only on option rows. `guaranteedIfExercised` only on player/dual rows. Each `optOut.afterSeason` has at least one season after it.
 - Signing-bonus payments sum to the bonus amount. Payments after the actual last season are classified automatically as A7 (no input flag).
 - ILIR is in (0, 25] **when the contract has deferred compensation** (deferral payments, deferred principal, or an A7 installment). Otherwise it is unused and may be 0. Stated interest is ≥ 0.
+- **Scenario (`validateScenario`):** `optOutTakenAfter` is null or equals an `OptOut.afterSeason`. Every `options` key is an option-row season, with value `exercised` or `declined`. Every `earnedBonuses` key is a contract season, with a finite value ≥ 0.
 
 ---
 
