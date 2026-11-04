@@ -10,9 +10,6 @@ export default defineConfig(() => {
         host: '0.0.0.0',
       },
       plugins: [tailwindcss(), react()],
-      build: {
-        chunkSizeWarningLimit: 600,
-      },
       resolve: {
         alias: {
           '@': path.resolve(import.meta.dirname, '.'),
