@@ -8,6 +8,12 @@ on:
     branches:
       - main
 
+# Read-only token for every job unless a job narrows it further. Without
+# this, jobs inherit the repo default; on same-repo PRs (Renovate) that put a
+# write-scoped GITHUB_TOKEN beside a `pnpm install` of the PR's lockfile.
+permissions:
+  contents: read
+
 jobs:
   audit:
     runs-on: ubuntu-26.04
