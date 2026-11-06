@@ -47,8 +47,18 @@ RUN npm install -g serve@14.2.6 --ignore-scripts
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
 
+# Response headers (CSP, nosniff, frame denial). Kept beside dist/, not in it:
+# serve resolves --config relative to the served directory, and a serve.json
+# inside dist/ would itself be downloadable at /serve.json.
+COPY serve.json ./serve.json
+
+# Drop root. The image only serves static files on an unprivileged port, so
+# the base image's built-in `node` user (uid 1000) is enough. Copied files stay
+# root-owned and world-readable, so the server can read but not modify them.
+USER node
+
 # Expose port 3000 (serve's default)
 EXPOSE 3000
 
 # Serve the built application
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["serve", "-s", "dist", "-l", "3000", "--config", "../serve.json"]
